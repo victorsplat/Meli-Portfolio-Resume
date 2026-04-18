@@ -1,0 +1,26 @@
+.contact-panel {
+  text-align: center;
+  border-bottom: none;
+}
+
+.contact-button.div {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 1.5rem;
+  justify-content: center;
+  font-weight: 600;
+}
+
+.contact-button {
+  margin-right: 0.5rem;
+  display: inline-block;
+}
+
+@media (max-width: 768px) {
+  .contact-button.div {
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+  }
+}
