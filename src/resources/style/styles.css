@@ -1,5 +1,6 @@
 /* Import modern font */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+@import 
+url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Quantico&Roboto:wght@300;400;700&family=Bitcount+Grid+Double&family=Saira+Stencil+One&family=Share+Tech+Mono&display=swap;');
 
 /* Component Styles */
 @import './hero.css';
@@ -7,6 +8,21 @@
 @import './projects.css';
 @import './contact.css';
 @import './backToTop.css';
+
+@font-face {
+  font-family: 'Harabara';
+  src: url('./fonts/Harabara.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap; /* Critical for performance */
+}
+
+
+/* Prevent horizontal overflow globally */
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+}
 
 /* Global Resets & Base Styles to homepage and general environment */
 * {
@@ -16,13 +32,15 @@
 }
 
 .app-shell {
-  font-family: 'Poppins', sans-serif;
-  line-height: 1.6;
+  font-family: 'Quantico', sans-serif;
+  line-height: 1.5;
   color: #2d3748;
   max-width: 100%;
+  overflow-x: hidden;
   margin: 0 auto;
   padding: 0;
   background-color: #f4f4f7; /* Lighter Gray Background */
+  font-size: 1.2rem;
 }
 
 .main-wrapper {
@@ -43,10 +61,11 @@
   mask-image: linear-gradient(to bottom, black 0%, transparent 95%);
 }
 
+
 /* Animations */
 @keyframes glowPulse {
-  0% { box-shadow: 0 4px 10px rgba(52, 131, 250, 0.3); }
-  100% { box-shadow: 0 6px 25px rgba(52, 131, 250, 0.8); }
+  0% { box-shadow: 0 4px 10px rgba(45, 50, 119, 0.3); }
+  100% { box-shadow: 0 6px 25px rgba(45, 50, 119, 0.8); }
 }
 
 @keyframes blink {
@@ -58,7 +77,7 @@
   display: inline-block;
   width: 3px;
   height: 1em;
-  background-color: #2563eb;
+  background-color: #2D3277;
   margin-left: 4px;
   animation: blink 1s step-end infinite;
   vertical-align: middle;
@@ -73,54 +92,58 @@
   }
 }
 
+
 /* Buttons */
 .button {
-  display: inline-block;
-  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #2D3277, #41468B);
   color: white !important;
-  padding: 0.75rem 1.5rem;
+  padding: 0.7rem 1.5rem;
   text-decoration: none;
   border-radius: 8px;
   transition: all 0.3s ease;
-  font-weight: 600;
+  font-size: 1.05rem;
+  font-weight: 800;
   border: none;
   cursor: pointer;
 }
 .button-icon{
-  vertical-align: middle;
-  margin-bottom: 0.1rem;
+  display: flex;
+  margin: 0;
 }
-.button-icon.first{
-  margin-left: 0.1rem;
-}
-
 .button:hover {
-  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  background: linear-gradient(135deg, #23275F, #2D3277);
   transform: translateY(-2px);
   animation: glowPulse 1.5s ease-in-out forwards;
 }
 .button.secondary {
-  background: linear-gradient(135deg, #2563eb, #3b82f6);
-  margin-top: 1rem;
-  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+  background: linear-gradient(135deg, #2D3277, #41468B);
+  margin-top: 0;
+  box-shadow: 0 4px 15px rgba(45, 50, 119, 0.4);
 }
 
-.contact-button.div{
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 1.5rem;
-    justify-content: center;
-    text-decoration: none;
-    border-radius: 8px;
-    transition: all 0.3s ease;
-    font-weight: 600;
-    border: none;}
+.about-layout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+}
 
-  .contact-button {
-    margin-right: 0.5rem;
-    display: inline-block;
-  }
+.about-actions {
+  margin-top: 0; /* Removed margin to align better with text */
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: nowrap; 
+  justify-content: flex-end; 
+  align-items: center;
+}
+
+.about-actions .button {
+  min-width: 160px;
+}
 
 /* Content Panels */
 .panel {
@@ -128,10 +151,14 @@
   border-bottom: 1px solid #e2e8f0;
 }
 
+.subtitle {
+  font-family: 'Harabara', sans-serif;
+}
+
 .panel h2 {
   font-size: 2rem;
   margin-bottom: 1rem;
-  color: #1a202c;
+  color: #41468B;
   font-weight: 600;
 }
 .content-container {
@@ -142,12 +169,33 @@
 
 /* Mobile Adjustments */
 @media (max-width: 768px) {
+  .about-layout {
+    flex-direction: row; /* Side-by-side on mobile */
+    gap: 1rem;
+    text-align: left; /* Keep text left aligned even on mobile */
+  }
   .panel {
     padding: 2rem 0;
   }
 
   .panel h2 {
     font-size: 1.75rem;
-    text-align: center;
+    text-align: left; /* Changed to left for consistency with user request */
+  }
+}
+
+@media (max-width: 480px) {
+  
+  .about-actions {
+    flex-direction: column; 
+    align-items: flex-end;
+    flex-shrink: 0;
+  }
+
+  .about-actions .button {
+    width: 110px;
+    font-size: 0.7rem;
+    padding: 0.6rem 0.5rem;
+    min-width: unset;
   }
 }

@@ -1,13 +1,15 @@
+'use client';
+
 import { useState, useEffect } from "react";
 import { useScroll, useTransform, useMotionValue, useSpring, useMotionValueEvent } from "framer-motion";
-import Skills from '../Skills.jsx';
-import DotPattern from '../../style/DotPattern.jsx';
-import Hero from '../../style/Hero.jsx';
-import About from '../../style/About.jsx';
-import Projects from '../../style/Projects.jsx';
-import Contact from '../../style/Contact.jsx';
-import BackToTop from '../../style/BackToTop.jsx';
-import { cardVariants } from '../../style/animations';
+import About from 'src/resources/components/sections/About.jsx';
+import TechSection from 'src/resources/components/sections/TechSection.jsx';
+import Skills from 'src/resources/components/sections/Skills.jsx';
+import Projects from 'src/resources/components/sections/Projects.jsx';
+import Contact from 'src/resources/components/sections/Contact.jsx';
+import DotPattern from 'src/resources/style/DotPattern.jsx';
+import Hero from 'src/resources/components/sections/Hero.jsx';
+import BackToTop from 'src/resources/style/BackToTop.jsx';
 
 function Home() {
   const [isMobile, setIsMobile] = useState(false);
@@ -24,8 +26,10 @@ function Home() {
   // Monitor scroll for Back to Top button
   const { scrollY } = useScroll();
   useMotionValueEvent(scrollY, "change", (latest) => {
-    if (latest > 400) setShowScrollButton(true);
-    else setShowScrollButton(false);
+    const isPastThreshold = latest > 400;
+    if (isPastThreshold !== showScrollButton) {
+      setShowScrollButton(isPastThreshold);
+    }
   });
 
   // Background Parallax Mouse Tracking
@@ -63,8 +67,9 @@ function Home() {
         <main style={{ position: 'relative', zIndex: 1 }}>
           <div className="content-container">
             <About onHover={setIsAboutHovered} />
+            <TechSection />
             <Skills />
-            <Projects cardVariants={cardVariants} />
+            <Projects />
             <Contact />
           </div>
         </main>

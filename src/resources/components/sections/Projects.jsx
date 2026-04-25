@@ -1,18 +1,21 @@
+import React from 'react';
 import { motion } from "framer-motion";
+import { cardVariants } from 'src/resources/style/animations';
 
 export const projects = [
   { title: 'Portfolio Website', description: 'Clean, responsive portfolio.', link: '#' },
   { title: 'Mercado Livre IT Case', description: 'Design ideas for the team.', link: '#' },
-  { title: 'Learning Dashboard', description: 'Tasks and progress tracking.', link: '#' },
+  { title: 'My Gallery', description: 'A creative space showcasing my visual work and photography.', link: '#', id: 'gallery' },
 ];
 
-const Projects = ({ cardVariants }) => (
+const Projects = () => (
   <section id="projects" className="panel">
     <h2>Projects</h2>
     <div className="grid">
       {projects.map((project) => (
         <motion.article 
           key={project.title} 
+          id={project.id}
           className="card" 
           variants={cardVariants}
           initial="hidden"

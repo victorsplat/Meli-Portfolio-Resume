@@ -8,7 +8,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Cell
 } from 'recharts';
 
 const personalData = [
@@ -42,7 +41,7 @@ const CustomTooltip = ({ active, payload, label }) => {
         color: '#4a5568'
       }}>
         <p style={{ margin: 0, fontWeight: 600 }}>{`${label}`}</p>
-        <p style={{ margin: 0, color: '#2563eb' }}>{`Proficiency: ${payload[0].value}%`}</p>
+        <p style={{ margin: 0, color: '#2D3277' }}>{`Proficiency: ${payload[0].value}%`}</p>
       </div>
     );
   }
@@ -51,13 +50,12 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 const Skills = () => {
   const ref = useRef(null);
-  const isInView = useInView(ref, { amount: 0.3 });
+  const isInView = useInView(ref, { amount: 0.3, once: true });
 
   return (
-    <section className="panel" ref={ref}>
+    <section className="panel" ref={ref} id="skills">
       <h2>Skills</h2>
       <div className="grid">
-        {/* Personal Skills - Vertical Bars */}
         <div className="card">
           <h3>Personal Skills</h3>
           <div className="chart-container">
@@ -66,12 +64,12 @@ const Skills = () => {
                 key={`personal-${isInView}`}
                 layout="vertical"
                 data={personalData}
-                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                margin={{ top: 5, right: 0, left: 10, bottom: 5 }}
               >
                 <defs>
                   <linearGradient id="gradPersonal" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor="#2563eb" />
-                    <stop offset="100%" stopColor="#60a5fa">
+                    <stop offset="0%" stopColor="#2D3277" />
+                    <stop offset="100%" stopColor="#4D5297">
                       <animate attributeName="stop-opacity" values="1;0.6;1" dur="3s" repeatCount="indefinite" />
                     </stop>
                   </linearGradient>
@@ -89,7 +87,7 @@ const Skills = () => {
                   dataKey="value" 
                   fill="url(#gradPersonal)" 
                   radius={[0, 4, 4, 0]} 
-                  isAnimationActive={true}
+                  isAnimationActive={isInView}
                   animationDuration={2000}
                   animationEasing="ease-out"
                 />
@@ -98,7 +96,6 @@ const Skills = () => {
           </div>
         </div>
 
-        {/* Tech Skills */}
         <div className="card">
           <h3>Tech Skills</h3>
           <div className="chart-container">
@@ -106,12 +103,12 @@ const Skills = () => {
               <BarChart 
                 key={`tech-${isInView}`}
                 data={techData} 
-                margin={{ top: 20, right: 30, left: 0, bottom: 0 }}
+                margin={{ top: 20, right: 30, left: 30, bottom: 0 }}
               >
                 <defs>
                   <linearGradient id="gradTech" x1="0" y1="1" x2="0" y2="0">
-                    <stop offset="0%" stopColor="#3b82f6" />
-                    <stop offset="100%" stopColor="#2563eb" />
+                    <stop offset="0%" stopColor="#3D4287" />
+                    <stop offset="100%" stopColor="#2D3277" />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
@@ -122,7 +119,7 @@ const Skills = () => {
                   dataKey="value" 
                   fill="url(#gradTech)" 
                   radius={[4, 4, 0, 0]} 
-                  isAnimationActive={true}
+                  isAnimationActive={isInView}
                   animationDuration={2000}
                   animationEasing="ease-out"
                 />
@@ -131,7 +128,6 @@ const Skills = () => {
           </div>
         </div>
 
-        {/* Other Skills */}
         <div className="card">
           <h3>Other Skills</h3>
           <div className="chart-container">
@@ -139,26 +135,19 @@ const Skills = () => {
               <BarChart 
                 key={`other-${isInView}`}
                 data={otherData} 
-                margin={{ top: 20, right: 20, left: 0, bottom: 0 }}
+                margin={{ top: 20, right: 30, left: 30, bottom: 0 }}
               >
                 <defs>
                   <linearGradient id="gradOther" x1="0" y1="1" x2="0" y2="0">
-                    <stop offset="0%" stopColor="#60a5fa" />
-                    <stop offset="100%" stopColor="#3b82f6" />
+                    <stop offset="0%" stopColor="#4D5297" />
+                    <stop offset="100%" stopColor="#3D4287" />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#4a5568' }} />
+                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#2e343c' }} />
                 <YAxis domain={[0, 100]} hide />
                 <Tooltip content={<CustomTooltip />} cursor={{ fill: 'transparent' }} />
-                <Bar 
-                  dataKey="value" 
-                  fill="url(#gradOther)" 
-                  radius={[4, 4, 0, 0]} 
-                  isAnimationActive={true}
-                  animationDuration={2000}
-                  animationEasing="ease-out"
-                />
+                <Bar dataKey="value" fill="url(#gradOther)" radius={[4, 4, 0, 0]} isAnimationActive={isInView} animationDuration={2000} animationEasing="ease-out" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -167,5 +156,4 @@ const Skills = () => {
     </section>
   );
 };
-
 export default Skills;

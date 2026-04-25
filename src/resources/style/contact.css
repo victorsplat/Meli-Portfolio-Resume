@@ -3,13 +3,31 @@
   border-bottom: none;
 }
 
+.contact-text.div{
+  margin-bottom: 1rem;
+}
+
+.contact-text.div h4 {
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.contact-text.div p {
+  font-size: 1.25rem;
+  color: #4a5568;
+}
+
 .contact-button.div {
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: 1.5rem;
   justify-content: center;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: all 0.3s ease;
   font-weight: 600;
+  border: none;
 }
 
 .contact-button {

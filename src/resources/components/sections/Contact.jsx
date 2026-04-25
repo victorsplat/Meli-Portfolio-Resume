@@ -1,13 +1,21 @@
+import React from 'react';
 import { motion } from "framer-motion";
 import { IoMail, IoLogoWhatsapp, IoLogoLinkedin } from "react-icons/io5";
-import { containerVariants, cardVariants } from './animations';
+import { containerVariants, cardVariants } from 'src/resources/style/animations';
 
 const Contact = () => {
   return (
     <section id="contact" className="panel contact-panel">
       <h2 className="section-header">Contact</h2>
-      <h4>Ready to discuss the portfolio and next steps for Mercado Livre IT?</h4>
-      <p>You can catch me up at Email, Whatsapp or Linkedin </p>
+      <motion.div
+              className="contact-text div"
+        variants={containerVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true }}>
+        <h4>Ready to discuss the portfolio and next steps for Mercado Livre IT?</h4>
+        <p>You can catch me up at Email, Whatsapp or Linkedin </p>
+      </motion.div>
       <motion.div 
         className="contact-button div"
         variants={containerVariants}
