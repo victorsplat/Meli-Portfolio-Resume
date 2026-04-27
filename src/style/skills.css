@@ -1,0 +1,39 @@
+.skills-wrapper {
+  background: linear-gradient(180deg, rgba(45, 50, 119, 0.03) 0%, transparent 100%);
+  border-radius: 24px;
+  padding: 1.5rem;
+  margin: 2rem 0;
+  border: 1px solid rgba(45, 50, 119, 0.1);
+}
+
+.skills-wrapper .recharts-rectangle {
+  fill: #2D3277 !important;
+  filter: drop-shadow(0 0 8px rgba(45, 50, 119, 0.3));
+}
+
+.chart-container {
+  width: 100%;
+  height: 350px;
+  min-height: 300px;
+  position: relative;
+}
+
+.recharts-wrapper:focus, 
+.recharts-surface:focus,
+.recharts-surface {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.recharts-default-tooltip {
+  background-color: #2D3277 !important; /* Deep Blue Tooltip */
+  border: none !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15) !important;
+  padding: 10px !important;
+}
+
+.recharts-tooltip-label { color: #fff !important; font-weight: 700 !important; }
+.recharts-tooltip-item { color: #e0e7ff !important; font-weight: 500 !important; }
