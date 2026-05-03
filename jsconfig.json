@@ -4,9 +4,10 @@
     "paths": {
       "@/*": ["./src/*"],
       "@app/*": ["./src/app/*"],
-      "@public/*": ["./public/*"],
       "@styles/*": ["./src/style/*"],
       "@assets/*": ["./public/assets/*"],
+        "@svg/*": ["./public/assets/svg/*"],
+        "@png/*": ["./public/assets/png/*"],
       "@components/*": ["./src/components/*"],
         "@pages/*": ["./src/components/pages/*"],
     },

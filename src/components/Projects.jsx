@@ -9,8 +9,8 @@ export const projects = [
 ];
 
 const Projects = () => (
-  <section id="projects" className="panel">
-    <h2>Projects</h2>
+  <section id="projects" className="panel content-container">
+    <h2 className="subtitle">Projects</h2>
     <div className="grid">
       {projects.map((project) => (
         <motion.article 

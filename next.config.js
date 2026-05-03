@@ -3,7 +3,11 @@ const nextConfig = {
   reactStrictMode: true,
   images: {
     formats: ['image/avif', 'image/webp'],
-    remotePatterns: [
+    remotePatterns: [ {
+        protocol: 'https',
+        hostname: 'lottie.host',
+      },
+
       {
         protocol: 'https',
         hostname: '**',
@@ -13,16 +17,14 @@ const nextConfig = {
   turbopack: {
     rules: {
       '*.svg': {
-        loaders: [
-          {
-            loader: '@svgr/webpack',
-            options: { icon: true }, // Optional: sets height/width to 1em
-          },
-        ],
-        as: '*.js', // Tells Turbopack to treat the output as JavaScript
+        loaders: [{
+          loader: '@svgr/webpack',
+          options: { icon: true },
+        }],
+        as: '*.js', // Tells Turbopack to treat the output as a JS module
       },
     },
-  }
+  },
 };
 
 

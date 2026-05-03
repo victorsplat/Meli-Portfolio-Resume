@@ -1,39 +1,116 @@
-.skills-wrapper {
-  background: linear-gradient(180deg, rgba(45, 50, 119, 0.03) 0%, transparent 100%);
-  border-radius: 24px;
-  padding: 1.5rem;
-  margin: 2rem 0;
-  border: 1px solid rgba(45, 50, 119, 0.1);
+.skills-section {
+  padding: 4rem 0;
 }
 
-.skills-wrapper .recharts-rectangle {
-  fill: #2D3277 !important;
-  filter: drop-shadow(0 0 8px rgba(45, 50, 119, 0.3));
+.stack-group {
+  margin-bottom: 3rem;
 }
 
-.chart-container {
+.stack-category-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  margin-bottom: 1.5rem;
+  opacity: 0.8;
+}
+
+.stack-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 1.5rem;
+}
+
+.flip-card {
+  perspective: 1000px;
+  height: 150px;
   width: 100%;
-  height: 350px;
-  min-height: 300px;
+}
+
+.flip-card-inner {
   position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  border-radius: 16px;
 }
 
-.recharts-wrapper:focus, 
-.recharts-surface:focus,
-.recharts-surface {
-  outline: none !important;
-  border: none !important;
-  box-shadow: none !important;
-  -webkit-tap-highlight-color: transparent;
+.card-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  background: var(--bg-hero);
+  border: 1px solid var(--panel-border);
+  backdrop-filter: blur(10px);
 }
 
-.recharts-default-tooltip {
-  background-color: #2D3277 !important; /* Deep Blue Tooltip */
-  border: none !important;
-  border-radius: 8px !important;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15) !important;
-  padding: 10px !important;
+.card-back {
+  transform: rotateY(180deg);
+  padding: 1rem;
+  text-align: center;
+  border-width: 2px;
 }
 
-.recharts-tooltip-label { color: #fff !important; font-weight: 700 !important; }
-.recharts-tooltip-item { color: #e0e7ff !important; font-weight: 500 !important; }
+.stack-description {
+  font-size: 0.75rem;
+  line-height: 1.3;
+  color: var(--text-main);
+}
+
+.stack-name-small {
+  font-size: 0.7rem;
+  font-weight: 800;
+  opacity: 0.5;
+  margin-top: auto;
+}
+
+.dark .stack-card {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.stack-card:hover {
+  border-color: var(--accent);
+}
+
+.stack-icon {
+  font-size: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 0 8px rgba(0,0,0,0.1));
+}
+
+.stack-name {
+  font-family: 'Quantico', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+@media (max-width: 768px) {
+  .stack-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+  
+  .stack-card {
+    padding: 1rem;
+  }
+
+  .card-face, .flip-card-inner {
+    border-radius: 32px;
+  }
+}
+
+@media (max-width: 480px) {
+  .stack-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

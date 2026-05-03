@@ -5,8 +5,8 @@ import { containerVariants, cardVariants } from '@/style/animations';
 
 const Contact = () => {
   return (
-    <section id="contact" className="panel contact-panel">
-      <h2 className="section-header">Contact</h2>
+    <section id="contact" className="panel contact-panel content-container">
+      <h2 className="subtitle">Contact</h2>
       <motion.div
               className="contact-text div"
         variants={containerVariants}

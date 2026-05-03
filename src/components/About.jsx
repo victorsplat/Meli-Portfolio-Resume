@@ -1,30 +1,54 @@
 import React from 'react';
-import { motion, useMotionValue, useTransform, useSpring, animate } from "framer-motion";
+import { motion } from 'framer-motion';
+import { IoDownloadOutline, IoNavigateOutline } from "react-icons/io5";
 
-const About = ({ onHover }) => (
-  <section 
-    id="about" 
-    className="panel"
-    onMouseEnter={() => onHover(true)}
-    onMouseLeave={() => onHover(false)}
-  >
-  <motion.div 
-              className="About-text"
-              initial={{ opacity: 0, x: -40 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 2, ease: "easeOut" }}
-    >
-    <h2 className='subtitle'>About</h2>
-    <div className="about-layout">
-      <p>
-        As a self-taught professional, I thrive on solving complex problems and growing alongside my team. I specialize in building practical, accessible web projects with React and Vite. Beyond the terminal, my expertise in photography and video editing helps me translate creative visions into seamless digital realities.
-      </p>
-      <div className="about-actions">
-        <a href="#projects" className="button">See Projects</a>
-        <a href="#gallery" className="button secondary">See Gallery</a>
+const About = () => {
+  return (
+    <section className="panel content-container" id="about">
+      <motion.h2 
+        className="subtitle"
+        initial={{ opacity: 0, y: -20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        viewport={{ once: true }}
+      >
+        About
+      </motion.h2>
+      
+      <div className="about-layout">
+        <motion.div 
+          className="about-card"
+          initial={{ opacity: 0, x: -50 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          viewport={{ once: true, amount: 0.3 }}
+        >
+          <p>
+            I am a full-stack developer with a passion for building clean, user-friendly, and high-performance web applications. 
+            Currently focusing on creating seamless digital experiences with modern technologies like React, Next.js, and Node.js.
+          </p>
+          <p style={{ marginTop: '1rem' }}>
+            My approach combines technical precision with a creative edge, ensuring that every project not only works perfectly but also provides a delightful user experience.
+          </p>
+        </motion.div>
+
+        <motion.div 
+          className="about-actions"
+          initial={{ opacity: 0, x: 50 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+          viewport={{ once: true }}
+        >
+          <a href="/resume.pdf" className="button" download>
+            Resume <IoDownloadOutline size={18} />
+          </a>
+          <a href="#projects" className="button secondary">
+            Projects <IoNavigateOutline size={18} />
+          </a>
+        </motion.div>
       </div>
-     </div>
-    </motion.div>
-  </section>
-);
+    </section>
+  );
+};
+
 export default About;
