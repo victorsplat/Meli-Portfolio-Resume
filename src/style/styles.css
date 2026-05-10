@@ -1,21 +1,25 @@
-/* Import modern font */
-@import 
-url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Quantico&Roboto:wght@300;400;700&family=Bitcount+Grid+Double&family=Saira+Stencil+One&family=Share+Tech+Mono&display=swap;');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Quantico&Roboto:wght@300;400;700&family=Bitcount+Grid+Double&family=Saira+Stencil+One&family=Share+Tech+Mono&display=swap');
 
-/* Component Styles */
-@import './hero.css';
-@import './skills.css';
-@import './projects.css';
-@import './contact.css';
-@import './about.css';
-@import './backToTop.css';
+@import "tailwindcss";
+
+@theme {
+  --font-harabara: "Harabara", sans-serif;
+  --font-quantico: "Quantico", sans-serif;
+  --font-saira: "Saira Stencil One", sans-serif;
+  --color-accent: var(--accent);
+  --color-bg-app: var(--bg-app);
+  --color-bg-hero: var(--bg-hero);
+  --color-text-main: var(--text-main);
+  --color-panel-border: var(--panel-border);
+  --animate-blink: blink 1s step-end infinite;
+}
 
 @font-face {
   font-family: 'Harabara';
   src: url('/fonts/Harabara.otf') format('opentype');
   font-weight: normal;
   font-style: normal;
-  font-display: swap; /* Critical for performance */
+  font-display: swap;
 }
 
 :root {
@@ -24,66 +28,14 @@ url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&famil
   --text-main: #111827;
   --accent: #2D3277;
   --panel-border: #e2e8f0;
-  --dot-color: rgba(0, 0, 0, 0.1);
 }
 
 .dark {
   --bg-app: #212630;
   --bg-hero: #121b29;
   --text-main: #f9fafb;
-  --accent: #FFE600; /* Mercado Livre Yellow or Indigo */
+  --accent: #FFE600;
   --panel-border: #334155;
-  --dot-color: rgba(255, 255, 255, 0.648);
-}
-
-/* Prevent horizontal overflow globally */
-html, body {
-  overflow-x: hidden;
-  width: 100%;
-}
-
-/* Global Resets & Base Styles to homepage and general environment */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-.app-shell {
-  font-family: 'Quantico', sans-serif;
-  line-height: 1.5;
-  color: var(--text-main);
-  max-width: 100%;
-  overflow-x: hidden;
-  margin: 0 auto;
-  padding: 0;
-  background-color: var(--bg-app);
-  font-size: 1.2rem;
-}
-
-.main-wrapper {
-  position: relative;
-  background-color: var(--bg-app);
-  overflow: hidden;
-}
-
-.dot-pattern {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-  pointer-events: none;
-  /* Spatial mask to fade dots at the bottom of the container */
-  -webkit-mask-image: linear-gradient(to bottom, black 0%, transparent 95%);
-  mask-image: linear-gradient(to bottom, black 0%, transparent 95%);
-}
-
-
-/* Animations */
-@keyframes glowPulse {
-  0% { box-shadow: 0 4px 10px rgba(45, 50, 119, 0.3); }
-  100% { box-shadow: 0 6px 25px rgba(45, 50, 119, 0.8); }
 }
 
 @keyframes blink {
@@ -91,94 +43,216 @@ html, body {
   50% { opacity: 0; }
 }
 
-.typewriter-cursor {
-  display: inline-block;
-  width: 3px;
-  height: 1em;
-  background-color: #2D3277;
-  margin-left: 4px;
-  animation: blink 1s step-end infinite;
-  vertical-align: middle;
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
-@keyframes gradientShift {
-  0% {
-    background-position: 0% 50%;
-  }
-  100% {
-    background-position: 100% 50%;
-  }
+html, body {
+  overflow-x: hidden;
+  width: 100%;
 }
 
+/* ============================================
+   REUSABLE COMPONENT CLASSES
+   Standardized component styles for consistency
+   ============================================ */
 
-/* Buttons */
-.button {
+/* --- Layout --- */
+.section {
+  padding: 2.5rem 0;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.section-clear {
+  padding: 2.5rem 0;
+  border-bottom: none;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+}
+
+/* --- Typography --- */
+.title {
+  font-family: "Harabara", sans-serif;
+  font-size: 2.2rem;
+  margin-bottom: 2rem;
+  margin-top: 1.5rem;
+  color: #2D3277;
+  font-weight: 600;
+}
+
+.dark .title {
+  color: var(--accent);
+}
+
+.text-muted {
+  color: #4a5568;
+}
+
+/* --- Buttons --- */
+.btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   background: linear-gradient(135deg, #2D3277, #41468B);
-  color: white !important;
-  padding: 0.7rem 1.5rem;
-  text-decoration: none;
-  border-radius: 8px;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
   transition: all 0.3s ease;
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 800;
   border: none;
   cursor: pointer;
+  transform: translateY(0);
+  text-decoration: none;
 }
-.button-icon{
-  display: flex;
-  margin: 0;
-}
-.button:hover {
+
+.btn:hover {
   background: linear-gradient(135deg, #23275F, #2D3277);
   transform: translateY(-2px);
-  animation: glowPulse 1.5s ease-in-out forwards;
 }
-.button.secondary {
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   background: linear-gradient(135deg, #2D3277, #41468B);
-  margin-top: 0;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+  font-weight: 800;
+  border: none;
+  cursor: pointer;
+  transform: translateY(0);
+  text-decoration: none;
   box-shadow: 0 4px 15px rgba(45, 50, 119, 0.4);
 }
 
-/* Content Panels */
-.panel {
-  padding: 2.5rem 0;
-  border-bottom: 1px solid var(--panel-border);
+.btn-secondary:hover {
+  background: linear-gradient(135deg, #23275F, #2D3277);
+  transform: translateY(-2px);
 }
 
-h2, .panel h2, .subtitle {
-  font-family: 'Harabara', sans-serif;
-  font-size: 2.2rem;
-  margin-bottom: 2rem;
-  color: #2D3277;
-  font-weight: 600;
+.btn-sm {
+  min-width: 160px;
 }
 
-.dark h2, .dark .panel h2, .dark .subtitle {
-  color: var(--accent);
-}
-
-.content-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 1.25rem; /* Keep content off the edges */
-}
-
-/* Mobile Adjustments */
 @media (max-width: 768px) {
-  .panel {
-    padding: 2rem 0;
-  }
-
-  .panel h2 {
-    font-size: 1.75rem;
-    text-align: left; /* Changed to left for consistency with user request */
+  .btn-sm {
+    width: 110px;
+    font-size: 0.7rem;
+    padding: 0.6rem 0.5rem;
+    min-width: unset;
   }
 }
 
-@media (max-width: 480px) {
-  /* Other mobile adjustments can go here */
+.btn-icon {
+  display: flex;
+  margin: 0;
+}
+
+/* --- Cards --- */
+.card {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 1rem;
+  padding: 1.75rem;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+  transition: all 0.3s ease;
+}
+
+.dark .card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.card-glass {
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 1.5rem;
+  padding: 2rem;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+  transition: transform 0.3s ease;
+}
+
+.dark .card-glass {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.card-hover:hover {
+  box-shadow: 0 10px 30px rgba(52, 131, 250, 0.2), 0 0 15px rgba(52, 131, 250, 0.1);
+  border: 1px solid rgba(52, 131, 250, 0.3);
+  background-color: rgba(255, 255, 255, 0.6);
+}
+
+/* --- Grid --- */
+.grid-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 2rem;
+}
+
+/* --- Interactive Elements --- */
+.link {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+/* --- Form Elements (for future contact forms) --- */
+.input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--panel-border);
+  background: rgba(255, 255, 255, 0.5);
+  transition: border-color 0.3s ease;
+}
+
+.dark .input {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.textarea {
+  composes: input;
+  min-height: 150px;
+  resize: vertical;
+}
+
+/* --- Utility --- */
+.center-content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2.5rem;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .center-content {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+}
+
+.text-center {
+  text-align: center;
 }

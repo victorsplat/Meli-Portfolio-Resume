@@ -23,7 +23,6 @@ function Home() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Monitor scroll for Back to Top button
   const { scrollY } = useScroll();
   useMotionValueEvent(scrollY, "change", (latest) => {
     const isPastThreshold = latest > 400;
@@ -32,11 +31,9 @@ function Home() {
     }
   });
 
-  // Background Parallax Mouse Tracking
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
-  
-  // Smooth the mouse movement
+
   const springConfig = { stiffness: 100, damping: 30 };
   const smoothedX = useSpring(mouseX, springConfig);
   const smoothedY = useSpring(mouseY, springConfig);
@@ -47,31 +44,34 @@ function Home() {
     mouseY.set(clientY - window.innerHeight / 2);
   }
 
-  // Scroll Fade Logic
   const { scrollYProgress } = useScroll();
   const patternOpacity = useTransform(scrollYProgress, [0, 0.5], [0.8, 0]);
   const patternY = useTransform(scrollYProgress, [0, 1], [0, -100]);
 
   return (
-    <div className="app-shell" onMouseMove={handleMouseMove}>
+    <div className="font-quantico leading-normal text-text-main max-w-full overflow-x-hidden mx-auto bg-bg-app text-lg" onMouseMove={handleMouseMove}>
       <Hero isMobile={isMobile} />
 
-      <div className="main-wrapper">
-        <DotPattern 
-          style={{ opacity: patternOpacity, y: patternY }} 
-          isHovered={isAboutHovered} 
+      <div className="relative bg-bg-app overflow-hidden">
+        <DotPattern
+          style={{ opacity: patternOpacity, y: patternY }}
+          isHovered={isAboutHovered}
           mouseX={smoothedX}
           mouseY={smoothedY}
         />
-        
+
         <main style={{ position: 'relative', zIndex: 1 }}>
-          <div className="content-container">
+          <div className="container">
             <About onHover={setIsAboutHovered} />
             <TechSection />
             <Skills />
             <Projects />
             <Contact />
           </div>
+
+          <footer className="py-8 text-center text-muted text-sm">
+            <p>This portfolio was built using Node.js, React, Express.JS and Tailwind</p>
+          </footer>
         </main>
       </div>
 

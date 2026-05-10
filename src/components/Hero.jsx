@@ -54,12 +54,11 @@ const Hero = ({ isMobile }) => {
   const rotateX = useTransform(mouseYSpring, [-300, 300], [15, -15]);
   const rotateY = useTransform(mouseXSpring, [-300, 300], [-15, 15]);
 
-  // Calculate shadow opacity based on tilt magnitude (distance from center)
   const shadowOpacity = useTransform(
     [rotateX, rotateY],
     ([rX, rY]) => {
       const tiltMagnitude = Math.sqrt(rX ** 2 + rY ** 2);
-      return 0.15 - (tiltMagnitude / 22) * 0.1; // Dims from 0.15 down to 0.05
+      return 0.15 - (tiltMagnitude / 22) * 0.1;
     }
   );
 
@@ -72,25 +71,29 @@ const Hero = ({ isMobile }) => {
   }
 
   return (
-    <header className="hero" onMouseMove={handleMouse} onMouseLeave={() => { x.set(0); y.set(0); }}>
-      <div className="hero-top-bar">
-        <div className="logo-container">
+    <header
+      className="bg-[var(--bg-hero)] text-[var(--text-main)] p-10 px-12 max-md:p-8 max-md:px-4 max-md:overflow-hidden text-left rounded-xl mb-8 shadow-[0_10px_30px_rgba(0,0,0,0.2)] [perspective:1000px] z-1 transition-[background,color] duration-300"
+      onMouseMove={handleMouse}
+      onMouseLeave={() => { x.set(0); y.set(0); }}
+    >
+      <div className="flex items-center justify-between min-h-[80px] mb-12 max-md:mb-6">
+        <div className="flex h-[70px] w-auto max-md:h-[50px]">
           <MotionMeliLogo
             aria-label="Mercado Livre Logo"
-            className="hero-logo"
+            className="h-full w-auto max-w-[260px] max-md:max-w-[180px] max-md:max-h-[50px] m-0 cursor-pointer flex items-center justify-center"
             initial={{ opacity: 0, y: -30 }}
-          animate={{ opacity: 1, y: 0 }}
-          whileHover={{ scale: 1.2, y: -5 }}
-          transition={{ 
-            y: { type: "spring", stiffness: 300 },
-            opacity: { duration: 1, delay: 0.8 },
-            scale: { type: "spring", stiffness: 400, damping: 10 }
-          }}
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-        />
+            animate={{ opacity: 1, y: 0 }}
+            whileHover={{ scale: 1.2, y: -5 }}
+            transition={{
+              y: { type: "spring", stiffness: 300 },
+              opacity: { duration: 1, delay: 0.8 },
+              scale: { type: "spring", stiffness: 400, damping: 10 }
+            }}
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          />
         </div>
-        <motion.button 
-          className="theme-toggle" 
+        <motion.button
+          className="bg-transparent border-none cursor-pointer text-inherit p-2 rounded-full flex transition-colors duration-200 hover:bg-black/5 dark:hover:bg-white/10"
           onClick={toggleTheme}
           whileTap={{ scale: 0.9 }}
           whileHover={{ scale: 1.1 }}
@@ -99,65 +102,63 @@ const Hero = ({ isMobile }) => {
           {theme === 'light' ? <IoMoonOutline size={22} /> : <IoSunnyOutline size={22} />}
         </motion.button>
       </div>
-      <div className="hero-container">
-        <motion.div 
-          className="hero-text"
-          initial={{ opacity: 0, x: -40 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 1, ease: "easeOut" }}
-        >
-          <p className="eyebrow">Hi, I&apos;m back in code!</p>
-          <h1>
+
+      <div className="flex items-center justify-center gap-8 flex-nowrap max-md:gap-4 max-md:justify-between">
+        <div className="flex-[1.5] min-w-0 max-md:flex-[2]">
+          <p className="font-harabara text-[2.2rem] max-md:text-xl max-md:max-w-[300px] opacity-90 font-semibold">
+            Hi, I&apos;m back in code!
+          </p>
+          <h1 className="font-saira text-[3.5rem] max-md:text-3xl max-md:mb-2 font-bold text-accent leading-tight whitespace-normal min-h-[1.2em]">
             <motion.span>{displayText}</motion.span>
-            <span className="typewriter-cursor" />
+            <span className="inline-block w-[3px] h-[1em] bg-[#2D3277] ml-1 align-middle animate-blink" />
           </h1>
-          <p className="hero-copy">
+          <p className="font-quantico text-2xl max-md:text-base max-md:max-w-full max-md:mb-4 font-semibold max-w-[500px] text-text-main mt-2 mb-6">
             Crafting digital experiences <br/> with a creative edge.
           </p>
-          <motion.a 
-            className="button" 
-            href="#contact" 
+          <motion.a
+            className="btn max-md:w-full max-md:max-w-[320px]"
+            href="#contact"
             animate={!isHovered ? {
               scale: [1, 1.05, 1],
               boxShadow: [
-                "0 4px 15px rgba(45, 50, 119, 0.2)", 
-                "0 4px 25px rgba(45, 50, 119, 0.6)", 
+                "0 4px 15px rgba(45, 50, 119, 0.2)",
+                "0 4px 25px rgba(45, 50, 119, 0.6)",
                 "0 4px 15px rgba(45, 50, 119, 0.2)"
-              ] 
+              ]
             } : { scale: 1, boxShadow: "0 4px 10px rgba(45, 50, 119, 0.1)" }}
             transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
           >
             Talk to me <IoPaperPlaneOutline size={15} />
           </motion.a>
-        </motion.div>
+        </div>
 
-        <div className="hero-animation" ref={containerRef}>
-          <motion.div 
-            className="tilted-wrapper"
+        <div className="flex-1 w-full min-w-0 h-[400px] max-md:h-[180px] flex justify-center items-center overflow-visible relative [perspective:1000px]" ref={containerRef}>
+          <motion.div
+            className="w-full h-full flex justify-center items-center relative"
             style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             initial={{ opacity: 0, x: isMobile ? 20 : 40, scale: 0.8 }}
             animate={{ opacity: 1, x: 0, scale: isMobile ? 1 : 1.5 }}
-            whileHover={{ scale: isMobile ? 1 : 1.6 }} // Higher than animate scale to prevent shrinking
-            transition={{ duration: 1, ease: "easeOut", delay: 1 }}>
-            
-            <motion.div 
-              className="hero-shadow" 
-              style={{ opacity: isMobile ? 0 : shadowOpacity }} 
+            whileHover={{ scale: isMobile ? 1 : 1.6 }}
+            transition={{ duration: 1, ease: "easeOut", delay: 1 }}
+          >
+            <motion.div
+              className="absolute w-[280px] h-[40px] bg-black blur-[25px] rounded-full bottom-[20%] left-1/2 -translate-x-1/2 pointer-events-none z-[-1] max-md:hidden"
+              style={{ opacity: isMobile ? 0 : shadowOpacity }}
             />
-            
+
             {isInView && (
-              <DotLottieReact 
-                className="portfolioAnim" 
+              <DotLottieReact
+                className="w-full h-full flex justify-center items-center [&_canvas]:w-full [&_canvas]:h-full [&_canvas]:object-contain [&_canvas]:pointer-events-none"
                 src={programmingComputerLottie}
                 speed={0.6}
                 loop={isHovered ? true : 2}
                 autoplay
-                renderConfig={{ 
-                  autoResize: true, // Now safe because parent footprint is stable
+                renderConfig={{
+                  autoResize: true,
                   devicePixelRatio: typeof window !== 'undefined' ? window.devicePixelRatio : 1
-                }} 
+                }}
               />
             )}
           </motion.div>
@@ -166,4 +167,5 @@ const Hero = ({ isMobile }) => {
     </header>
   );
 };
+
 export default Hero;

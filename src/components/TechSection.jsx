@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { 
+import {
   TbBrandReact,
   TbBrandNextjs,
   TbBrandTypescript,
@@ -21,8 +21,8 @@ import {
   TbApi,
   TbHierarchy
 } from 'react-icons/tb';
-import { 
-  SiExpress, 
+import {
+  SiExpress,
   SiJavascript,
   SiRecharts,
   SiPostgresql,
@@ -84,57 +84,61 @@ const containerVariants = {
 
 const cardVariants = {
   hidden: { opacity: 0, y: 20 },
-  visible: { 
-    opacity: 1, 
+  visible: {
+    opacity: 1,
     y: 0,
     transition: { duration: 0.5, ease: "easeOut" }
   }
 };
 
 const TechSection = () => {
+  const [flippedIndex, setFlippedIndex] = useState(null);
+
+  const handleFlip = (index) => {
+    setFlippedIndex(flippedIndex === index ? null : index);
+  };
+
   return (
-    <motion.section 
-      className="panel content-container" 
+    <motion.section
+      className="section container"
       id="tech-stack"
       variants={containerVariants}
       initial="hidden"
       whileInView="visible"
-      style={{ background: 'none', border: 'none', boxShadow: 'none' }}
       viewport={{ once: true, amount: 0.1 }}
     >
-      <h2 className="subtitle">Technologies & Stack</h2>
-      
+      <h2 className="title">Technologies & Stack</h2>
+
       {stackData.map((group, idx) => (
-        <div key={idx} className="stack-group">
-          <h3 className="stack-category-title">{group.category}</h3>
-          <div className="stack-grid">
+        <div key={idx} className="mb-12">
+          <h3 className="text-lg font-bold uppercase tracking-widest text-accent mb-6 opacity-80">{group.category}</h3>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-6 max-md:grid-cols-3 max-md:gap-4 max-sm:grid-cols-2">
             {group.items.map((item, i) => (
-              <motion.div 
-                key={i} 
-                className="stack-card flip-card"
+              <motion.div
+                key={i}
+                className="[perspective:1000px] h-[150px] w-full"
                 variants={cardVariants}
               >
-                <motion.div 
-                  className="flip-card-inner"
-                  whileHover={{ 
-                    rotateY: 180,
-                    boxShadow: `0 0 25px ${item.color}44`,
+                <motion.div
+                  className="relative w-full h-full [transform-style:preserve-3d] rounded-[24px]"
+                  animate={{
+                    rotateY: flippedIndex === i ? 180 : 0,
+                    boxShadow: flippedIndex === i ? `0 0 25px ${item.color}44` : 'none',
                   }}
+                  onClick={() => handleFlip(i)}
+                  whileTap={{ scale: 0.95 }}
                   transition={{ duration: 0.6, type: "spring", stiffness: 260, damping: 20 }}
-                  style={{ borderRadius: 'var(--card-radius)' }}
                 >
-                  {/* Front Face */}
-                  <div className="card-face card-front" style={{ borderRadius: 'var(--card-radius)' }}>
-                    <div className="stack-icon" style={{ color: item.color }}>
+                  <div className="absolute inset-0 backface-hidden rounded-[24px] flex flex-col items-center justify-center gap-4 bg-[var(--bg-hero)] border border-panel-border backdrop-blur-md">
+                    <div className="text-4xl flex items-center justify-center [filter:drop-shadow(0_0_8px_rgba(0,0,0,0.1))]" style={{ color: item.color }}>
                       {item.icon}
                     </div>
-                    <span className="stack-name">{item.name}</span>
+                    <span className="font-quantico text-sm font-semibold text-text-main">{item.name}</span>
                   </div>
 
-                  {/* Back Face */}
-                  <div className="card-face card-back" style={{ borderColor: item.color, borderRadius: 'var(--card-radius)' }}>
-                    <p className="stack-description">{item.description}</p>
-                    <span className="stack-name-small">{item.name}</span>
+                  <div className="absolute inset-0 backface-hidden [transform:rotateY(180deg)] p-4 text-center border-2 rounded-[24px] flex flex-col items-center justify-center gap-4 bg-[var(--bg-hero)] backdrop-blur-md" style={{ borderColor: item.color }}>
+                    <p className="text-xs leading-tight text-text-main">{item.description}</p>
+                    <span className="text-[0.7rem] font-extrabold opacity-50 mt-auto">{item.name}</span>
                   </div>
                 </motion.div>
               </motion.div>

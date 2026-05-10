@@ -9,21 +9,21 @@ export const projects = [
 ];
 
 const Projects = () => (
-  <section id="projects" className="panel content-container">
-    <h2 className="subtitle">Projects</h2>
-    <div className="grid">
+  <section id="projects" className="section container">
+    <h2 className="title">Projects</h2>
+    <div className="grid-cards">
       {projects.map((project) => (
-        <motion.article 
-          key={project.title} 
+        <motion.article
+          key={project.title}
           id={project.id}
-          className="card" 
+          className="card card-hover"
           variants={cardVariants}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, amount: 0.3 }}
           whileHover={{ scale: 1.03, y: -5 }}
         >
-          <h3>{project.title}</h3>
+          <h3 className="text-xl mb-6 text-center text-[#2D3277] dark:text-white">{project.title}</h3>
           <p>{project.description}</p>
           <a href={project.link}>Explore</a>
         </motion.article>
