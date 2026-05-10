@@ -94,19 +94,56 @@ export default function GalleryAdmin() {
     }
   }
 
-  function handleFileSelect(e) {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 10 * 1024 * 1024) {
-        alert('Image too large (max 10MB)');
-        e.target.value = '';
-        return;
-      }
+  function compressImage(file, maxDim = 1200, quality = 0.8) {
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => {
-        setPreview(e.target.result);
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round(height * maxDim / width);
+              width = maxDim;
+            } else {
+              width = Math.round(width * maxDim / height);
+              height = maxDim;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob((blob) => {
+            const fr = new FileReader();
+            fr.onload = () => resolve(fr.result);
+            fr.onerror = reject;
+            fr.readAsDataURL(blob);
+          }, 'image/jpeg', quality);
+        };
+        img.onerror = reject;
+        img.src = e.target.result;
       };
+      reader.onerror = reject;
       reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleFileSelect(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Image too large (max 10MB)');
+      e.target.value = '';
+      return;
+    }
+    try {
+      const compressed = await compressImage(file);
+      setPreview(compressed);
+    } catch {
+      alert('Failed to process image');
+      e.target.value = '';
     }
   }
 
