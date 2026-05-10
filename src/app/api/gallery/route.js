@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { sanitize, validateImage } from '@/lib/validate';
 import { rateLimit, getClientIp } from '@/lib/rateLimit';
+import sharp from 'sharp';
 
 export async function GET(_request) {
   try {
@@ -46,12 +47,19 @@ export async function POST(request) {
       return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
+    const buffer = Buffer.from(image.split(',')[1], 'base64');
+    const webpBuffer = await sharp(buffer)
+      .resize(1200, 1200, { fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 80 })
+      .toBuffer();
+    const processedImage = `data:image/webp;base64,${webpBuffer.toString('base64')}`;
+
     const client = await clientPromise;
     const db = client.db('gallery');
     const collection = db.collection('images');
 
     const result = await collection.insertOne({
-      url: image,
+      url: processedImage,
       title: sanitize(title || ''),
       description: sanitize(description || ''),
       createdAt: new Date()
