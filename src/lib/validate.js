@@ -70,6 +70,14 @@ export function validateApplication(body) {
   if (!body.phone || !validatePhone(body.phone)) errors.phone = 'Valid phone is required (10-11 digits)';
   if (!body.cpf || !validateCPF(body.cpf)) errors.cpf = 'Valid CPF is required (11 digits)';
   if (!body.cep || !validateCEP(body.cep)) errors.cep = 'Valid CEP is required (8 digits)';
+  if (!body.birthDate) {
+    errors.birthDate = 'Date of birth is required';
+  } else {
+    const date = new Date(body.birthDate);
+    const today = new Date();
+    const age = today.getFullYear() - date.getFullYear();
+    if (isNaN(date.getTime()) || age < 16 || age > 120) errors.birthDate = 'You must be at least 16 years old';
+  }
   if (!body.experience) errors.experience = 'Experience level is required';
   if (!body.availability) errors.availability = 'Availability is required';
 
@@ -93,7 +101,9 @@ export function validateApplication(body) {
       cep: body.cep.replace(/\D/g, '').slice(0, 8),
       experience: body.experience,
       availability: body.availability,
+      birthDate: body.birthDate || '',
       isPcd: body.isPcd === 'yes' ? 'yes' : 'no',
+      deficiency: body.isPcd === 'yes' ? sanitize(body.deficiency || '') : '',
       race: sanitize(body.race || ''),
       civilState: sanitize(body.civilState || ''),
       education: sanitize(body.education || ''),

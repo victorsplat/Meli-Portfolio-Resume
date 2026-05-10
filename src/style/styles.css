@@ -253,11 +253,39 @@ body {
   border-radius: 0.5rem;
   border: 1px solid var(--panel-border);
   background: rgba(255, 255, 255, 0.5);
+  color: var(--text-main);
   transition: border-color 0.3s ease;
 }
 
 .dark .input {
   background: rgba(255, 255, 255, 0.05);
+  color: var(--text-main);
+}
+
+.input option {
+  color: #111827;
+  background: #fff;
+}
+
+.dark .input option {
+  color: #f9fafb;
+  background: #1e1e2e;
+}
+
+select.input {
+  appearance: auto;
+}
+
+input[type="email"].input,
+input[type="tel"].input {
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--text-main);
+}
+
+.dark input[type="email"].input,
+.dark input[type="tel"].input {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-main);
 }
 
 .input:focus {

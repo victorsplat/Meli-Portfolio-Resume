@@ -13,8 +13,8 @@ export default function MeliHeroSection() {
   const { theme, toggleTheme } = useTheme();
   const { t } = useI18n();
   const { scrollY } = useScroll();
-  const heroOpacity = useTransform(scrollY, [0, 300], [1, 0]);
-  const heroY = useTransform(scrollY, [0, 300], [0, -100]);
+  const heroOpacity = useTransform(scrollY, [0, 800], [1, 0]);
+  const heroY = useTransform(scrollY, [0, 800], [0, -100]);
 
   return (
     <motion.div style={{ opacity: heroOpacity, y: heroY }} className="relative bg-bg-hero text-text-main pb-20 md:pb-32">

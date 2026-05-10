@@ -16,8 +16,8 @@ export default function MeliITCase() {
   const { t } = useI18n();
   const skillOptions = ['Coding', 'Social', 'Office', 'Excel', 'English', 'Leadership'];
   const [formData, setFormData] = useState({
-    name: '', email: '', phone: '', cpf: '', cep: '', experience: '', availability: '',
-    isPcd: '', race: '', civilState: '', education: '', gender: '', skills: []
+    name: '', email: '', phone: '', cpf: '', birthDate: '', cep: '', experience: '', availability: '',
+    isPcd: '', deficiency: '', race: '', civilState: '', education: '', gender: '', skills: []
   });
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -25,11 +25,56 @@ export default function MeliITCase() {
   const [touched, setTouched] = useState({});
   const [errors, setErrors] = useState({});
 
-  const requiredFields = ['name', 'email', 'phone', 'cpf', 'cep', 'experience', 'availability'];
+  const requiredFields = ['name', 'email', 'phone', 'cpf', 'birthDate', 'cep', 'experience', 'availability'];
+
+  function formatField(name, value) {
+    const digits = value.replace(/\D/g, '');
+    if (name === 'cpf') {
+      return digits
+        .replace(/^(\d{3})(\d)/, '$1.$2')
+        .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+        .replace(/\.(\d{3})(\d)/, '.$1-$2')
+        .slice(0, 14);
+    }
+    if (name === 'phone') {
+      if (digits.length <= 10) {
+        return digits
+          .replace(/^(\d{2})(\d)/, '($1) $2')
+          .replace(/(\d{4})(\d)/, '$1-$2')
+          .slice(0, 14);
+      }
+      return digits
+        .replace(/^(\d{2})(\d)/, '($1) $2')
+        .replace(/(\d{5})(\d)/, '$1-$2')
+        .slice(0, 15);
+    }
+    if (name === 'cep') {
+      return digits.replace(/^(\d{5})(\d)/, '$1-$2').slice(0, 9);
+    }
+    return value;
+  }
 
   const validateField = (name, value) => {
     if (!value && requiredFields.includes(name)) return 'required';
-    if (name === 'email' && value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'invalid';
+    if (name === 'email' && value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'formato';
+    if (name === 'cpf' && value) {
+      const digits = value.replace(/\D/g, '');
+      if (digits.length !== 11) return 'digits';
+    }
+    if (name === 'phone' && value) {
+      const digits = value.replace(/\D/g, '');
+      if (digits.length < 10 || digits.length > 11) return 'digits';
+    }
+    if (name === 'cep' && value) {
+      const digits = value.replace(/\D/g, '');
+      if (digits.length !== 8) return 'digits';
+    }
+    if (name === 'birthDate' && value) {
+      const date = new Date(value);
+      const today = new Date();
+      const age = today.getFullYear() - date.getFullYear();
+      if (isNaN(date.getTime()) || age < 16 || age > 120) return 'invalid';
+    }
     return null;
   };
 
@@ -42,7 +87,8 @@ export default function MeliITCase() {
         skills: checked ? [...formData.skills, value] : formData.skills.filter(s => s !== value)
       };
     } else {
-      newData = { ...formData, [name]: value };
+      const formatted = ['cpf', 'phone', 'cep'].includes(name) ? formatField(name, value) : value;
+      newData = { ...formData, [name]: formatted };
     }
     setFormData(newData);
     if (touched[name]) {
@@ -79,14 +125,33 @@ export default function MeliITCase() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
-      if (!res.ok) throw new Error('Failed to submit');
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || data.fields ? Object.values(data.fields).join(', ') : 'Failed to submit');
+      }
       setSubmitted(true);
     } catch (error) {
-      setSubmitError('Failed to submit application. Please try again.');
+      setSubmitError(error.message || 'Failed to submit application. Please try again.');
       console.error('Submit error:', error);
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const fieldMessage = (name) => {
+    const code = errors[name];
+    if (!code) return null;
+    const msgs = {
+      name: { required: 'Name is required' },
+      email: { required: 'Email is required', formato: 'Enter a valid email (user@domain.com)' },
+      phone: { required: 'Phone is required', digits: 'Phone must have 10-11 digits' },
+      cpf: { required: 'CPF is required', digits: 'CPF must have exactly 11 digits' },
+      birthDate: { required: 'Date of birth is required', invalid: 'You must be at least 16 years old' },
+      cep: { required: 'CEP is required', digits: 'CEP must have exactly 8 digits' },
+      experience: { required: 'Experience level is required' },
+      availability: { required: 'Select a shift' },
+    };
+    return msgs[name]?.[code] || 'Required';
   };
 
   const inputClass = (name) => {
@@ -140,27 +205,32 @@ export default function MeliITCase() {
                     <div>
                       <label className="block text-sm font-medium mb-2">{t('meliCase.name')}</label>
                       <input type="text" name="name" value={formData.name} onChange={handleChange} onBlur={handleBlur} required className={inputClass('name')} placeholder={t('meliCase.namePlaceholder')} />
-                      {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name === 'required' ? 'Required' : ''}</p>}
+                      {errors.name && <p className="text-red-500 text-xs mt-1">{fieldMessage('name')}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-2">{t('meliCase.email')}</label>
                       <input type="email" name="email" value={formData.email} onChange={handleChange} onBlur={handleBlur} required className={inputClass('email')} placeholder={t('meliCase.emailPlaceholder')} />
-                      {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email === 'required' ? 'Required' : 'Invalid email'}</p>}
+                      {errors.email && <p className="text-red-500 text-xs mt-1">{fieldMessage('email')}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-2">{t('meliCase.phone')}</label>
                       <input type="tel" name="phone" value={formData.phone} onChange={handleChange} onBlur={handleBlur} required className={inputClass('phone')} placeholder={t('meliCase.phonePlaceholder')} />
-                      {errors.phone && <p className="text-red-500 text-xs mt-1">Required</p>}
+                      {errors.phone && <p className="text-red-500 text-xs mt-1">{fieldMessage('phone')}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-2">{t('meliCase.cpf')}</label>
                       <input type="text" name="cpf" value={formData.cpf} onChange={handleChange} onBlur={handleBlur} required className={inputClass('cpf')} placeholder={t('meliCase.cpfPlaceholder')} />
-                      {errors.cpf && <p className="text-red-500 text-xs mt-1">Required</p>}
+                      {errors.cpf && <p className="text-red-500 text-xs mt-1">{fieldMessage('cpf')}</p>}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">{t('meliCase.birthDate')}</label>
+                      <input type="date" name="birthDate" value={formData.birthDate} onChange={handleChange} onBlur={handleBlur} required className={inputClass('birthDate')} />
+                      {errors.birthDate && <p className="text-red-500 text-xs mt-1">{fieldMessage('birthDate')}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-2">{t('meliCase.cep')}</label>
                       <input type="text" name="cep" value={formData.cep} onChange={handleChange} onBlur={handleBlur} required className={inputClass('cep')} placeholder={t('meliCase.cepPlaceholder')} />
-                      {errors.cep && <p className="text-red-500 text-xs mt-1">Required</p>}
+                      {errors.cep && <p className="text-red-500 text-xs mt-1">{fieldMessage('cep')}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-2">{t('meliCase.experience')}</label>
@@ -171,7 +241,7 @@ export default function MeliITCase() {
                         <option value="1-2">{t('meliCase.exp1to2')}</option>
                         <option value="3+">{t('meliCase.exp3plus')}</option>
                       </select>
-                      {errors.experience && <p className="text-red-500 text-xs mt-1">Required</p>}
+                      {errors.experience && <p className="text-red-500 text-xs mt-1">{fieldMessage('experience')}</p>}
                     </div>
                   </motion.div>
 
@@ -195,6 +265,16 @@ export default function MeliITCase() {
                             </label>
                           ))}
                         </div>
+                        {formData.isPcd === 'yes' && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            className="mt-3"
+                          >
+                            <label className="block text-sm font-medium mb-2">{t('meliCase.deficiency')}</label>
+                            <input type="text" name="deficiency" value={formData.deficiency} onChange={handleChange} onBlur={handleBlur} className="input" placeholder={t('meliCase.deficiencyPlaceholder')} />
+                          </motion.div>
+                        )}
                       </div>
                       <div>
                         <label className="block text-sm font-medium mb-2">{t('meliCase.race')}</label>
@@ -250,7 +330,7 @@ export default function MeliITCase() {
                     </label>
                   ))}
                 </div>
-                {errors.availability && <p className="text-red-500 text-xs mt-1">Required</p>}
+                {errors.availability && <p className="text-red-500 text-xs mt-1">{fieldMessage('availability')}</p>}
               </div>
                 </motion.div>
 
@@ -287,6 +367,14 @@ export default function MeliITCase() {
                     ) : t('meliCase.submit')}
                   </button>
                 </motion.div>
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  whileInView={{ opacity: 1 }}
+                  viewport={{ once: true }}
+                  className="text-xs text-muted text-center mt-4 max-w-md mx-auto leading-relaxed"
+                >
+                  {t('meliCase.privacyNotice')}
+                </motion.p>
               </form>
             )}
           </motion.div>
