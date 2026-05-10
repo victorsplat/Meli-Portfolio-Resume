@@ -1,34 +1,44 @@
+'use client';
+
 import React from 'react';
 import { motion } from "framer-motion";
 import { cardVariants } from '@/style/animations';
+import Link from 'next/link';
+import { useI18n } from '@/lib/i18n';
 
-export const projects = [
-  { title: 'Portfolio Website', description: 'Clean, responsive portfolio.', link: '#' },
-  { title: 'Mercado Livre IT Case', description: 'Design ideas for the team.', link: '#' },
-  { title: 'My Gallery', description: 'A creative space showcasing my visual work and photography.', link: '#', id: 'gallery' },
-];
+const Projects = () => {
+  const { t } = useI18n();
 
-const Projects = () => (
-  <section id="projects" className="section container">
-    <h2 className="title">Projects</h2>
-    <div className="grid-cards">
-      {projects.map((project) => (
-        <motion.article
-          key={project.title}
-          id={project.id}
-          className="card card-hover"
-          variants={cardVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.3 }}
-          whileHover={{ scale: 1.03, y: -5 }}
-        >
-          <h3 className="text-xl mb-6 text-center text-[#2D3277] dark:text-white">{project.title}</h3>
-          <p>{project.description}</p>
-          <a href={project.link}>Explore</a>
-        </motion.article>
-      ))}
-    </div>
-  </section>
-);
+  const projects = [
+    { title: t('projects.portfolio'), description: t('projects.portfolioDesc'), link: '#' },
+    { title: t('projects.meli'), description: t('projects.meliDesc'), link: '/meli-it-case' },
+    { title: t('projects.gallery'), description: t('projects.galleryDesc'), link: '/gallery', id: 'gallery' },
+  ];
+
+  return (
+    <section id="projects" className="section container">
+      <h2 className="title">{t('projects.title')}</h2>
+      <div className="grid-cards">
+        {projects.map((project) => (
+          <motion.article
+            key={project.title}
+            id={project.id}
+            className="card card-hover"
+            variants={cardVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.3 }}
+            whileHover={{ scale: 1.03, y: -5 }}
+          >
+            <h3 className="text-xl mb-6 text-center text-accent dark:text-white">{project.title}</h3>
+            <p>{project.description}</p>
+            <Link href={project.link} className="btn btn-sm mt-4">
+              {t('projects.explore')}
+            </Link>
+          </motion.article>
+        ))}
+      </div>
+    </section>
+  );
+};
 export default Projects;

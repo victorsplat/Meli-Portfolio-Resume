@@ -1,9 +1,11 @@
 'use client';
-import { useEffect, useState, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, useMotionValue, useTransform, useSpring, animate, useInView } from "framer-motion";
 import { IoPaperPlaneOutline, IoSunnyOutline, IoMoonOutline } from "react-icons/io5";
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
-
+import { useTheme } from '@/lib/useTheme';
+import { useI18n } from '@/lib/i18n';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 import Image from 'next/image';
 import MeliLogoSvg from '@assets/svg/melilogo.svg';
 
@@ -14,22 +16,10 @@ const MotionMeliLogo = motion.create(MeliLogoSvg);
 
 const Hero = ({ isMobile }) => {
   const [isHovered, setIsHovered] = useState(false);
-  const [theme, setTheme] = useState('light');
+  const { theme, toggleTheme } = useTheme();
+  const { t, lang } = useI18n();
 
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    setTheme(savedTheme);
-    document.documentElement.classList.toggle('dark', savedTheme === 'dark');
-  }, []);
-
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-    document.documentElement.classList.toggle('dark', newTheme === 'dark');
-  };
-
-  const baseText = "Victor Prado Portfolio.";
+  const baseText = t('hero.portfolioTitle');
   const count = useMotionValue(0);
   const displayText = useTransform(count, (latest) => baseText.slice(0, Math.round(latest)));
 
@@ -37,6 +27,7 @@ const Hero = ({ isMobile }) => {
   const isInView = useInView(containerRef, { once: true, amount: 0.1 });
 
   useEffect(() => {
+    count.set(0);
     const controls = animate(count, baseText.length, {
       type: "tween",
       duration: 1.5,
@@ -44,7 +35,7 @@ const Hero = ({ isMobile }) => {
       delay: 0.5,
     });
     return controls.stop;
-  }, [count]);
+  }, [count, baseText, lang]);
 
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -92,28 +83,31 @@ const Hero = ({ isMobile }) => {
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           />
         </div>
-        <motion.button
-          className="bg-transparent border-none cursor-pointer text-inherit p-2 rounded-full flex transition-colors duration-200 hover:bg-black/5 dark:hover:bg-white/10"
-          onClick={toggleTheme}
-          whileTap={{ scale: 0.9 }}
-          whileHover={{ scale: 1.1 }}
-          aria-label="Toggle dark mode"
-        >
-          {theme === 'light' ? <IoMoonOutline size={22} /> : <IoSunnyOutline size={22} />}
-        </motion.button>
+        <div className="flex items-center gap-2">
+          <LanguageSwitcher />
+          <motion.button
+            className="bg-transparent border-none cursor-pointer text-inherit p-2 rounded-full flex transition-colors duration-200 hover:bg-black/5 dark:hover:bg-white/10"
+            onClick={toggleTheme}
+            whileTap={{ scale: 0.9 }}
+            whileHover={{ scale: 1.1 }}
+            aria-label={t('hero.toggleTheme')}
+          >
+            {theme === 'light' ? <IoMoonOutline size={22} /> : <IoSunnyOutline size={22} />}
+          </motion.button>
+        </div>
       </div>
 
       <div className="flex items-center justify-center gap-8 flex-nowrap max-md:gap-4 max-md:justify-between">
         <div className="flex-[1.5] min-w-0 max-md:flex-[2]">
           <p className="font-harabara text-[2.2rem] max-md:text-xl max-md:max-w-[300px] opacity-90 font-semibold">
-            Hi, I&apos;m back in code!
+            {t('hero.greeting')}
           </p>
           <h1 className="font-saira text-[3.5rem] max-md:text-3xl max-md:mb-2 font-bold text-accent leading-tight whitespace-normal min-h-[1.2em]">
             <motion.span>{displayText}</motion.span>
-            <span className="inline-block w-[3px] h-[1em] bg-[#2D3277] ml-1 align-middle animate-blink" />
+            <span className="inline-block w-[3px] h-[1em] bg-accent ml-1 align-middle animate-blink" />
           </h1>
           <p className="font-quantico text-2xl max-md:text-base max-md:max-w-full max-md:mb-4 font-semibold max-w-[500px] text-text-main mt-2 mb-6">
-            Crafting digital experiences <br/> with a creative edge.
+            {t('hero.subtitleLine1')} <br/> {t('hero.subtitleLine2')}
           </p>
           <motion.a
             className="btn max-md:w-full max-md:max-w-[320px]"
@@ -128,7 +122,7 @@ const Hero = ({ isMobile }) => {
             } : { scale: 1, boxShadow: "0 4px 10px rgba(45, 50, 119, 0.1)" }}
             transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
           >
-            Talk to me <IoPaperPlaneOutline size={15} />
+            {t('hero.talkToMe')} <IoPaperPlaneOutline size={15} />
           </motion.a>
         </div>
 

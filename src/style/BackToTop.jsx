@@ -10,7 +10,7 @@ const BackToTop = ({ visible }) => {
     <AnimatePresence>
       {visible && (
         <motion.button
-          className="fixed bottom-8 right-8 w-[50px] h-[50px] rounded-full bg-[#2D3277] text-white border-none cursor-pointer flex items-center justify-center shadow-lg z-[100] outline-none"
+          className="fixed bottom-8 right-8 w-[50px] h-[50px] rounded-full bg-accent text-white border-none cursor-pointer flex items-center justify-center shadow-lg z-[100] outline-none"
           onClick={scrollToTop}
           initial={{ opacity: 0, y: 20, scale: 0.8 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}

@@ -2,20 +2,23 @@
 import { useRef, useState, useEffect } from "react";
 import { motion, useInView } from "framer-motion";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-
-const personalData = [
-  { name: 'Thirst for Knowledge', value: 95 },
-  { name: 'Commitment', value: 80 },
-  { name: 'Collaborativeness', value: 88 }
-];
-
-const techData = [
-  { name: 'Back-end', value: 80 },
-  { name: 'Front-end', value: 95 },
-  { name: 'DevOps', value: 75 }
-];
+import { useI18n } from '@/lib/i18n';
 
 const Skills = () => {
+  const { t } = useI18n();
+
+  const personalData = [
+    { name: t('skills.knowledge'), value: 95 },
+    { name: t('skills.commitment'), value: 80 },
+    { name: t('skills.collaborative'), value: 88 }
+  ];
+
+  const techData = [
+    { name: t('skills.backend'), value: 80 },
+    { name: t('skills.frontend'), value: 95 },
+    { name: t('skills.devops'), value: 75 }
+  ];
+
   const ref = useRef(null);
   const isInView = useInView(ref, { amount: 0.1, once: true });
   const [mounted, setMounted] = useState(false);
@@ -26,11 +29,11 @@ const Skills = () => {
 
   return (
     <section className="section container" id="skills" ref={ref}>
-      <h2 className="title">Skills & Proficiency</h2>
+      <h2 className="title">{t('skills.title')}</h2>
 
       <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-8 mb-16">
         <div className="bg-[var(--bg-hero)] p-6 rounded-[24px]">
-          <h3 className="mb-4">Personal Skills</h3>
+          <h3 className="mb-4">{t('skills.personal')}</h3>
           <div style={{ height: '200px', minWidth: 0 }}>
             {mounted && (
               <ResponsiveContainer width="100%" height="100%">
@@ -46,7 +49,7 @@ const Skills = () => {
         </div>
 
         <div className="bg-[var(--bg-hero)] p-6 rounded-[24px]">
-          <h3 className="mb-4">Overall Tech</h3>
+          <h3 className="mb-4">{t('skills.overallTech')}</h3>
           <div style={{ height: '200px', minWidth: 0 }}>
             {mounted && (
               <ResponsiveContainer width="100%" height="100%">

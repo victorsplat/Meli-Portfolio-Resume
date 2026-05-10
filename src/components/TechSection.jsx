@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useI18n } from '@/lib/i18n';
 import {
   TbBrandReact,
   TbBrandNextjs,
@@ -92,6 +93,7 @@ const cardVariants = {
 };
 
 const TechSection = () => {
+  const { t } = useI18n();
   const [flippedIndex, setFlippedIndex] = useState(null);
 
   const handleFlip = (index) => {
@@ -107,11 +109,13 @@ const TechSection = () => {
       whileInView="visible"
       viewport={{ once: true, amount: 0.1 }}
     >
-      <h2 className="title">Technologies & Stack</h2>
+      <h2 className="title">{t('tech.title')}</h2>
 
-      {stackData.map((group, idx) => (
+      {stackData.map((group, idx) => {
+        const categoryKey = group.category === 'Front-end' ? 'frontend' : group.category === 'Back-end' ? 'backend' : 'tools';
+        return (
         <div key={idx} className="mb-12">
-          <h3 className="text-lg font-bold uppercase tracking-widest text-accent mb-6 opacity-80">{group.category}</h3>
+          <h3 className="text-lg font-bold uppercase tracking-widest text-accent mb-6 opacity-80">{t('tech.' + categoryKey)}</h3>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-6 max-md:grid-cols-3 max-md:gap-4 max-sm:grid-cols-2">
             {group.items.map((item, i) => (
               <motion.div
@@ -137,7 +141,7 @@ const TechSection = () => {
                   </div>
 
                   <div className="absolute inset-0 backface-hidden [transform:rotateY(180deg)] p-4 text-center border-2 rounded-[24px] flex flex-col items-center justify-center gap-4 bg-[var(--bg-hero)] backdrop-blur-md" style={{ borderColor: item.color }}>
-                    <p className="text-xs leading-tight text-text-main">{item.description}</p>
+                    <p className="text-xs leading-tight text-text-main">{t('tech.items.' + item.name)}</p>
                     <span className="text-[0.7rem] font-extrabold opacity-50 mt-auto">{item.name}</span>
                   </div>
                 </motion.div>
@@ -145,7 +149,8 @@ const TechSection = () => {
             ))}
           </div>
         </div>
-      ))}
+        );
+      })}
     </motion.section>
   );
 };

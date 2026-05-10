@@ -1,4 +1,5 @@
 import '@styles/styles.css';
+import Providers from '@/components/Providers';
 
 export const metadata = {
   title: 'Meli Portfolio',
@@ -7,8 +8,12 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body>
+        <Providers>
+          {children}
+        </Providers>
+      </body>
     </html>
   );
 }

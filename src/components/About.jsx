@@ -1,10 +1,18 @@
+'use client';
+
 import React from 'react';
 import { motion } from 'framer-motion';
 import { IoDownloadOutline, IoNavigateOutline } from "react-icons/io5";
+import { useI18n } from '@/lib/i18n';
 
-const About = () => {
+const About = ({ onHover }) => {
+  const { t } = useI18n();
+
   return (
-    <section className="section container" id="about">
+    <section className="section container" id="about"
+      onMouseEnter={() => onHover?.(true)}
+      onMouseLeave={() => onHover?.(false)}
+    >
       <motion.h2
         className="title"
         initial={{ opacity: 0, y: -20 }}
@@ -12,7 +20,7 @@ const About = () => {
         transition={{ duration: 0.5 }}
         viewport={{ once: true }}
       >
-        About
+        {t('about.title')}
       </motion.h2>
 
       <div className="flex flex-wrap items-center justify-start gap-6 mb-10 max-md:flex-row max-md:items-end">
@@ -23,13 +31,9 @@ const About = () => {
           transition={{ duration: 0.8, ease: "easeOut" }}
           viewport={{ once: true, amount: 0.3 }}
         >
-          <p>
-            I am a full-stack developer with a passion for building clean, user-friendly, and high-performance web applications.
-            Currently focusing on creating seamless digital experiences with modern technologies like React, Next.js, and Node.js.
-          </p>
-          <p style={{ marginTop: '1rem' }}>
-            My approach combines technical precision with a creative edge, ensuring that every project not only works perfectly but also provides a delightful user experience.
-          </p>
+          <p>{t('about.p1')}</p>
+          <p style={{ marginTop: '1rem' }}>{t('about.p2')}</p>
+          <p style={{ marginTop: '1rem' }}>{t('about.p3')}</p>
         </motion.div>
 
         <motion.div
@@ -40,10 +44,10 @@ const About = () => {
           viewport={{ once: true }}
         >
           <a href="/resume.pdf" className="btn btn-secondary max-md:w-full max-md:max-w-[320px]" download>
-            Resume <IoDownloadOutline size={18} />
+            {t('about.resume')} <IoDownloadOutline size={18} />
           </a>
           <a href="#projects" className="btn btn-secondary max-md:w-full max-md:max-w-[320px]">
-            Projects <IoNavigateOutline size={18} />
+            {t('about.projects')} <IoNavigateOutline size={18} />
           </a>
         </motion.div>
       </div>

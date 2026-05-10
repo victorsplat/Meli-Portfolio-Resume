@@ -10,8 +10,12 @@ import Contact from '@/components/Contact';
 import DotPattern from '@/style/DotPattern';
 import Hero from '@/components/Hero';
 import BackToTop from '@/style/BackToTop';
+import { useI18n } from '@/lib/i18n';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 function Home() {
+  const { t } = useI18n();
+  usePageTitle('siteTitle');
   const [isMobile, setIsMobile] = useState(false);
   const [isAboutHovered, setIsAboutHovered] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
@@ -70,7 +74,7 @@ function Home() {
           </div>
 
           <footer className="py-8 text-center text-muted text-sm">
-            <p>This portfolio was built using Node.js, React, Express.JS and Tailwind</p>
+            <p>{t('homeFooter')}</p>
           </footer>
         </main>
       </div>
