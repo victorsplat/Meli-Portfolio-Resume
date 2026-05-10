@@ -11,14 +11,15 @@ export async function GET(_request) {
     const db = client.db('gallery');
     const collection = db.collection('images');
     const images = await collection.find({}).sort({ createdAt: -1 }).toArray();
-    return NextResponse.json(images.map(({ url, ...rest }) => ({
-      ...rest,
-      url: url.startsWith('data:') ? url : url,
-      _id: rest._id.toString()
+    return NextResponse.json(images.map((doc) => ({
+      ...doc,
+      url: typeof doc.url === 'string' && doc.url.startsWith('data:') ? doc.url : doc.url,
+      _id: doc._id.toString()
     })));
   } catch (error) {
     console.error('Error fetching images:', error);
-    return NextResponse.json({ error: 'Failed to fetch images' }, { status: 500 });
+    const msg = error instanceof Error ? `${error.name}: ${error.message}` : 'Failed to fetch images';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 
@@ -76,7 +77,7 @@ export async function POST(request) {
     return NextResponse.json({ success: true, id: result.insertedId });
   } catch (error) {
     console.error('Error adding image:', error);
-    const message = error instanceof Error ? error.message : 'Failed to add image';
+    const message = error instanceof Error ? `${error.name}: ${error.message}` : 'Failed to add image';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
