@@ -25,7 +25,6 @@ import {
 import {
   SiExpress,
   SiJavascript,
-  SiRecharts,
   SiPostgresql,
   SiPostman,
   SiVercel

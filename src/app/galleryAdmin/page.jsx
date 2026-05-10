@@ -8,9 +8,15 @@ import { usePageTitle } from '@/lib/usePageTitle';
 import PageHeader from '@/components/PageHeader';
 import GalleryLightbox from '@/components/GalleryLightbox';
 
+const AUTH_KEY = 'gallery_admin_token';
+
 export default function GalleryAdmin() {
   const { t } = useI18n();
   usePageTitle('galleryAdmin.title');
+  const [authenticated, setAuthenticated] = useState(false);
+  const [authChecking, setAuthChecking] = useState(true);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [authError, setAuthError] = useState('');
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -19,10 +25,61 @@ export default function GalleryAdmin() {
   const [preview, setPreview] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
   const fileInputRef = useRef(null);
+  const passwordRef = useRef(null);
 
   useEffect(() => {
-    fetchImages();
+    const token = localStorage.getItem(AUTH_KEY);
+    if (token) {
+      setAuthenticated(true);
+      fetchImages(token);
+    } else {
+      setAuthChecking(false);
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    if (!authenticated && !authChecking && passwordRef.current) {
+      passwordRef.current.focus();
+    }
+  }, [authenticated, authChecking]);
+
+  function getAuthHeaders(token) {
+    const t = token || localStorage.getItem(AUTH_KEY);
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${t}`
+    };
+  }
+
+  async function handleLogin(e) {
+    e.preventDefault();
+    setAuthError('');
+    if (!passwordInput.trim()) {
+      setAuthError('Password is required');
+      return;
+    }
+    const testRes = await fetch('/api/gallery', {
+      method: 'POST',
+      headers: getAuthHeaders(passwordInput.trim()),
+      body: JSON.stringify({ image: '', title: '', description: '' })
+    });
+    if (testRes.status === 401 || testRes.status === 403) {
+      setAuthError('Invalid password');
+      return;
+    }
+    localStorage.setItem(AUTH_KEY, passwordInput.trim());
+    setAuthenticated(true);
+    setPasswordInput('');
+    fetchImages(passwordInput.trim());
+  }
+
+  function handleLogout() {
+    localStorage.removeItem(AUTH_KEY);
+    setAuthenticated(false);
+    setImages([]);
+    setPasswordInput('');
+  }
 
   async function fetchImages() {
     try {
@@ -33,12 +90,18 @@ export default function GalleryAdmin() {
       console.error('Error fetching images:', error);
     } finally {
       setLoading(false);
+      setAuthChecking(false);
     }
   }
 
   function handleFileSelect(e) {
     const file = e.target.files[0];
     if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        alert('Image too large (max 10MB)');
+        e.target.value = '';
+        return;
+      }
       const reader = new FileReader();
       reader.onload = (e) => {
         setPreview(e.target.result);
@@ -54,12 +117,8 @@ export default function GalleryAdmin() {
     try {
       const res = await fetch('/api/gallery', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          image: preview,
-          title,
-          description
-        })
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ image: preview, title, description })
       });
 
       if (res.ok) {
@@ -69,7 +128,8 @@ export default function GalleryAdmin() {
         if (fileInputRef.current) fileInputRef.current.value = '';
         fetchImages();
       } else {
-        alert(t('galleryAdmin.uploadFailed'));
+        const data = await res.json();
+        alert(data.error || t('galleryAdmin.uploadFailed'));
       }
     } catch (error) {
       console.error('Error uploading:', error);
@@ -83,7 +143,10 @@ export default function GalleryAdmin() {
     if (!confirm(t('galleryAdmin.deleteConfirm'))) return;
 
     try {
-      const res = await fetch(`/api/gallery?id=${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/gallery?id=${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
       if (res.ok) {
         fetchImages();
         setSelectedImage(null);
@@ -91,6 +154,43 @@ export default function GalleryAdmin() {
     } catch (error) {
       console.error('Error deleting:', error);
     }
+  }
+
+  if (!authenticated) {
+    return (
+      <div className="min-h-screen bg-bg-app flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="card max-w-md w-full mx-4 p-8"
+        >
+          <h1 className="title text-2xl text-center mb-2">{t('galleryAdmin.title')}</h1>
+          <p className="text-muted text-center mb-6 text-sm">Enter admin password to continue</p>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <input
+              ref={passwordRef}
+              type="password"
+              value={passwordInput}
+              onChange={(e) => setPasswordInput(e.target.value)}
+              placeholder="Admin password"
+              className="input text-center text-lg"
+              autoFocus
+            />
+            {authError && (
+              <p className="text-red-500 text-sm text-center">{authError}</p>
+            )}
+            <button type="submit" className="btn w-full">
+              Authenticate
+            </button>
+          </form>
+          <div className="text-center mt-6">
+            <Link href="/" className="text-sm text-accent hover:underline">
+              {t('galleryAdmin.backToHome')}
+            </Link>
+          </div>
+        </motion.div>
+      </div>
+    );
   }
 
   return (
@@ -110,6 +210,9 @@ export default function GalleryAdmin() {
             <Link href="/gallery" className="btn btn-sm btn-secondary">
               {t('galleryAdmin.viewGallery')}
             </Link>
+            <button onClick={handleLogout} className="btn btn-sm !bg-red-500 hover:!bg-red-600">
+              Logout
+            </button>
           </div>
         </motion.div>
 
@@ -126,10 +229,11 @@ export default function GalleryAdmin() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
                 onChange={handleFileSelect}
                 className="w-full p-3 border border-[var(--panel-border)] rounded-lg bg-white/50 dark:bg-white/5"
               />
+              <p className="text-xs text-muted mt-1">Max 10MB. Accepted: JPEG, PNG, WebP, GIF, AVIF</p>
             </div>
 
             {preview && (
@@ -172,6 +276,9 @@ export default function GalleryAdmin() {
             >
               {uploading ? t('galleryAdmin.uploading') : t('galleryAdmin.upload')}
             </button>
+            <p className="text-xs text-muted text-center mt-3">
+              Rate limit: 20 uploads/deletions per minute per IP
+            </p>
           </div>
         </motion.div>
 
@@ -180,7 +287,14 @@ export default function GalleryAdmin() {
         </div>
 
         {loading ? (
-          <div className="text-center py-10 text-muted">{t('galleryAdmin.loading')}</div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {[1,2,3,4].map((i) => (
+              <div key={i} className="card p-3">
+                <div className="aspect-square skeleton rounded-lg mb-3" />
+                <div className="h-4 w-2/3 skeleton" />
+              </div>
+            ))}
+          </div>
         ) : images.length === 0 ? (
           <div className="text-center py-10 text-muted">{t('galleryAdmin.noImages')}</div>
         ) : (
@@ -194,6 +308,7 @@ export default function GalleryAdmin() {
                   exit={{ opacity: 0, scale: 0.9 }}
                   className="card p-3 cursor-pointer group"
                   onClick={() => setSelectedImage(img)}
+                  layout
                 >
                   <div className="aspect-square rounded-lg overflow-hidden mb-3">
                     <img

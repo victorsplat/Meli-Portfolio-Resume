@@ -1,13 +1,20 @@
 import clientPromise from '@/lib/mongodb';
 import { NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/auth';
+import { sanitize, validateImage } from '@/lib/validate';
+import { rateLimit, getClientIp } from '@/lib/rateLimit';
 
-export async function GET() {
+export async function GET(_request) {
   try {
     const client = await clientPromise;
     const db = client.db('gallery');
     const collection = db.collection('images');
     const images = await collection.find({}).sort({ createdAt: -1 }).toArray();
-    return NextResponse.json(images);
+    return NextResponse.json(images.map(({ url, ...rest }) => ({
+      ...rest,
+      url: url.startsWith('data:') ? url : url,
+      _id: rest._id.toString()
+    })));
   } catch (error) {
     console.error('Error fetching images:', error);
     return NextResponse.json({ error: 'Failed to fetch images' }, { status: 500 });
@@ -15,6 +22,17 @@ export async function GET() {
 }
 
 export async function POST(request) {
+  const auth = requireAdmin(request);
+  if (!auth.authorized) return auth.error;
+
+  const rl = rateLimit(getClientIp(request));
+  if (!rl.allowed) {
+    return NextResponse.json({ error: 'Too many requests' }, {
+      status: 429,
+      headers: { 'Retry-After': String(rl.retryAfter) }
+    });
+  }
+
   try {
     const body = await request.json();
     const { image, title, description } = body;
@@ -23,14 +41,19 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Image is required' }, { status: 400 });
     }
 
+    const validation = validateImage(image);
+    if (!validation.valid) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
+    }
+
     const client = await clientPromise;
     const db = client.db('gallery');
     const collection = db.collection('images');
 
     const result = await collection.insertOne({
       url: image,
-      title: title || '',
-      description: description || '',
+      title: sanitize(title || ''),
+      description: sanitize(description || ''),
       createdAt: new Date()
     });
 
@@ -42,6 +65,17 @@ export async function POST(request) {
 }
 
 export async function DELETE(request) {
+  const auth = requireAdmin(request);
+  if (!auth.authorized) return auth.error;
+
+  const rl = rateLimit(getClientIp(request));
+  if (!rl.allowed) {
+    return NextResponse.json({ error: 'Too many requests' }, {
+      status: 429,
+      headers: { 'Retry-After': String(rl.retryAfter) }
+    });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');

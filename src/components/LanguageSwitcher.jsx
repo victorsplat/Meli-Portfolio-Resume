@@ -1,6 +1,5 @@
 'use client';
 
-import { motion, AnimatePresence } from 'framer-motion';
 import { useI18n } from '@/lib/i18n';
 
 const languages = [

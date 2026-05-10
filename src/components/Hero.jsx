@@ -6,12 +6,10 @@ import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { useTheme } from '@/lib/useTheme';
 import { useI18n } from '@/lib/i18n';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
-import Image from 'next/image';
 import MeliLogoSvg from '@assets/svg/melilogo.svg';
 
 const programmingComputerLottie = '/assets/svg/programmingComputer.lottie';
 
-const MotionImage = motion.create(Image);
 const MotionMeliLogo = motion.create(MeliLogoSvg);
 
 const Hero = ({ isMobile }) => {

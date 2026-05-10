@@ -5,9 +5,12 @@ import Link from 'next/link';
 import MeliLogoSvg from '@assets/svg/melilogo.svg';
 import { FaArrowRight, FaClock, FaUserTie, FaMapMarkerAlt } from 'react-icons/fa';
 import { useI18n } from '@/lib/i18n';
-import PageHeader from '@/components/PageHeader';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { useTheme } from '@/lib/useTheme';
+import { IoSunnyOutline, IoMoonOutline } from 'react-icons/io5';
 
 export default function MeliHeroSection() {
+  const { theme, toggleTheme } = useTheme();
   const { t } = useI18n();
   const { scrollY } = useScroll();
   const heroOpacity = useTransform(scrollY, [0, 300], [1, 0]);
@@ -28,7 +31,16 @@ export default function MeliHeroSection() {
           transition={{ duration: 0.8 }}
           className="text-center"
         >
-          <PageHeader />
+          <div className="flex items-center justify-end gap-2 mb-6">
+            <LanguageSwitcher />
+            <button
+              onClick={toggleTheme}
+              className="bg-transparent border-none cursor-pointer text-text-main p-2 rounded-full flex transition-colors duration-200 hover:bg-black/5 dark:hover:bg-white/10"
+              aria-label={t('hero.toggleTheme')}
+            >
+              {theme === 'light' ? <IoMoonOutline size={22} /> : <IoSunnyOutline size={22} />}
+            </button>
+          </div>
           <div className="flex items-center justify-center gap-3 mb-6">
             <div className="bg-[#FFE600] text-[#333] px-4 py-1 rounded-full text-sm font-bold">
               {t('meliCase.badge')}

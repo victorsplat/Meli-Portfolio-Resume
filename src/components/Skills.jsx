@@ -1,6 +1,6 @@
 'use client';
 import { useRef, useState, useEffect } from "react";
-import { motion, useInView } from "framer-motion";
+import { useInView } from "framer-motion";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useI18n } from '@/lib/i18n';
 

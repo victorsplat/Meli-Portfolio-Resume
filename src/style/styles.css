@@ -54,6 +54,19 @@ html, body {
   width: 100%;
 }
 
+html {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+::selection {
+  background: var(--accent);
+  color: white;
+}
+
 /* ============================================
    REUSABLE COMPONENT CLASSES
    Standardized component styles for consistency
@@ -193,10 +206,18 @@ html, body {
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+.card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 .card-hover:hover {
-  box-shadow: 0 10px 30px rgba(52, 131, 250, 0.2), 0 0 15px rgba(52, 131, 250, 0.1);
-  border: 1px solid rgba(52, 131, 250, 0.3);
-  background-color: rgba(255, 255, 255, 0.6);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(45, 50, 119, 0.12);
+  border-color: var(--accent);
+}
+
+.dark .card-hover:hover {
+  box-shadow: 0 12px 40px rgba(255, 230, 0, 0.08);
 }
 
 /* --- Grid --- */
@@ -210,6 +231,19 @@ html, body {
 .link {
   color: var(--accent);
   text-decoration: underline;
+}
+
+/* --- Skeleton Loading --- */
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-hero) 25%, var(--bg-app) 50%, var(--bg-hero) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: 0.5rem;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 /* --- Form Elements (for future contact forms) --- */
@@ -229,6 +263,19 @@ html, body {
 .input:focus {
   border-color: var(--accent);
   outline: none;
+  box-shadow: 0 0 0 3px rgba(45, 50, 119, 0.15);
+}
+
+.dark .input:focus {
+  box-shadow: 0 0 0 3px rgba(255, 230, 0, 0.15);
+}
+
+.input.input-error {
+  border-color: #ef4444;
+}
+
+.input.input-error:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
 }
 
 .textarea {

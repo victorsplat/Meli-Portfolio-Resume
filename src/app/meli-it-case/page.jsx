@@ -20,19 +20,80 @@ export default function MeliITCase() {
     isPcd: '', race: '', civilState: '', education: '', gender: '', skills: []
   });
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
+  const [touched, setTouched] = useState({});
+  const [errors, setErrors] = useState({});
+
+  const requiredFields = ['name', 'email', 'phone', 'cpf', 'cep', 'experience', 'availability'];
+
+  const validateField = (name, value) => {
+    if (!value && requiredFields.includes(name)) return 'required';
+    if (name === 'email' && value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'invalid';
+    return null;
+  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    let newData;
     if (type === 'checkbox') {
-      setFormData(prev => ({
-        ...prev,
-        skills: checked ? [...prev.skills, value] : prev.skills.filter(s => s !== value)
-      }));
+      newData = {
+        ...formData,
+        skills: checked ? [...formData.skills, value] : formData.skills.filter(s => s !== value)
+      };
     } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
+      newData = { ...formData, [name]: value };
+    }
+    setFormData(newData);
+    if (touched[name]) {
+      const error = validateField(name, value);
+      setErrors(prev => ({ ...prev, [name]: error }));
     }
   };
-  const handleSubmit = (e) => { e.preventDefault(); setSubmitted(true); };
+
+  const handleBlur = (e) => {
+    const { name, value } = e.target;
+    setTouched(prev => ({ ...prev, [name]: true }));
+    const error = validateField(name, value);
+    setErrors(prev => ({ ...prev, [name]: error }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const newErrors = {};
+    const newTouched = {};
+    requiredFields.forEach(field => {
+      newTouched[field] = true;
+      const error = validateField(field, formData[field]);
+      if (error) newErrors[field] = error;
+    });
+    setTouched(prev => ({ ...prev, ...newTouched }));
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
+
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const res = await fetch('/api/applications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      if (!res.ok) throw new Error('Failed to submit');
+      setSubmitted(true);
+    } catch (error) {
+      setSubmitError('Failed to submit application. Please try again.');
+      console.error('Submit error:', error);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const inputClass = (name) => {
+    const base = 'input';
+    if (touched[name] && errors[name]) return `${base} input-error`;
+    return base;
+  };
 
   return (
     <div className="min-h-screen bg-bg-app text-text-main overflow-x-hidden">
@@ -78,33 +139,39 @@ export default function MeliITCase() {
                   <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4 } } }} className="grid md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-medium mb-2">{t('meliCase.name')}</label>
-                      <input type="text" name="name" value={formData.name} onChange={handleChange} required className="input" placeholder={t('meliCase.namePlaceholder')} />
+                      <input type="text" name="name" value={formData.name} onChange={handleChange} onBlur={handleBlur} required className={inputClass('name')} placeholder={t('meliCase.namePlaceholder')} />
+                      {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name === 'required' ? 'Required' : ''}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-2">{t('meliCase.email')}</label>
-                      <input type="email" name="email" value={formData.email} onChange={handleChange} required className="input" placeholder={t('meliCase.emailPlaceholder')} />
+                      <input type="email" name="email" value={formData.email} onChange={handleChange} onBlur={handleBlur} required className={inputClass('email')} placeholder={t('meliCase.emailPlaceholder')} />
+                      {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email === 'required' ? 'Required' : 'Invalid email'}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-2">{t('meliCase.phone')}</label>
-                      <input type="tel" name="phone" value={formData.phone} onChange={handleChange} required className="input" placeholder={t('meliCase.phonePlaceholder')} />
+                      <input type="tel" name="phone" value={formData.phone} onChange={handleChange} onBlur={handleBlur} required className={inputClass('phone')} placeholder={t('meliCase.phonePlaceholder')} />
+                      {errors.phone && <p className="text-red-500 text-xs mt-1">Required</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-2">{t('meliCase.cpf')}</label>
-                      <input type="text" name="cpf" value={formData.cpf} onChange={handleChange} required className="input" placeholder={t('meliCase.cpfPlaceholder')} />
+                      <input type="text" name="cpf" value={formData.cpf} onChange={handleChange} onBlur={handleBlur} required className={inputClass('cpf')} placeholder={t('meliCase.cpfPlaceholder')} />
+                      {errors.cpf && <p className="text-red-500 text-xs mt-1">Required</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-2">{t('meliCase.cep')}</label>
-                      <input type="text" name="cep" value={formData.cep} onChange={handleChange} required className="input" placeholder={t('meliCase.cepPlaceholder')} />
+                      <input type="text" name="cep" value={formData.cep} onChange={handleChange} onBlur={handleBlur} required className={inputClass('cep')} placeholder={t('meliCase.cepPlaceholder')} />
+                      {errors.cep && <p className="text-red-500 text-xs mt-1">Required</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-2">{t('meliCase.experience')}</label>
-                      <select name="experience" value={formData.experience} onChange={handleChange} required className="input">
+                      <select name="experience" value={formData.experience} onChange={handleChange} onBlur={handleBlur} required className={inputClass('experience')}>
                         <option value="">{t('meliCase.experiencePlaceholder')}</option>
                         <option value="none">{t('meliCase.expNone')}</option>
                         <option value="1">{t('meliCase.expLess1')}</option>
                         <option value="1-2">{t('meliCase.exp1to2')}</option>
                         <option value="3+">{t('meliCase.exp3plus')}</option>
                       </select>
+                      {errors.experience && <p className="text-red-500 text-xs mt-1">Required</p>}
                     </div>
                   </motion.div>
 
@@ -132,7 +199,7 @@ export default function MeliITCase() {
                       <div>
                         <label className="block text-sm font-medium mb-2">{t('meliCase.race')}</label>
                         <select name="race" value={formData.race} onChange={handleChange} className="input">
-                          <option value="">{t('meliCase.experiencePlaceholder')}</option>
+                          <option value="">{t('meliCase.selectOption')}</option>
                           {['White', 'Black', 'Brown', 'Yellow', 'Indigenous', 'Other'].map(r => (
                             <option key={r} value={r.toLowerCase()}>{t('meliCase.race' + r)}</option>
                           ))}
@@ -141,7 +208,7 @@ export default function MeliITCase() {
                       <div>
                         <label className="block text-sm font-medium mb-2">{t('meliCase.civilState')}</label>
                         <select name="civilState" value={formData.civilState} onChange={handleChange} className="input">
-                          <option value="">{t('meliCase.experiencePlaceholder')}</option>
+                          <option value="">{t('meliCase.selectOption')}</option>
                           {['Single', 'Married', 'Divorced', 'Widowed', 'Stable'].map(c => (
                             <option key={c} value={c.toLowerCase()}>{t('meliCase.civil' + c)}</option>
                           ))}
@@ -150,7 +217,7 @@ export default function MeliITCase() {
                       <div>
                         <label className="block text-sm font-medium mb-2">{t('meliCase.education')}</label>
                         <select name="education" value={formData.education} onChange={handleChange} className="input">
-                          <option value="">{t('meliCase.experiencePlaceholder')}</option>
+                          <option value="">{t('meliCase.selectOption')}</option>
                           <option value="highschool">{t('meliCase.eduHighschool')}</option>
                           <option value="associate">{t('meliCase.eduAssociate')}</option>
                           <option value="bachelor">{t('meliCase.eduBachelor')}</option>
@@ -161,7 +228,7 @@ export default function MeliITCase() {
                       <div>
                         <label className="block text-sm font-medium mb-2">{t('meliCase.gender')}</label>
                         <select name="gender" value={formData.gender} onChange={handleChange} className="input">
-                          <option value="">{t('meliCase.experiencePlaceholder')}</option>
+                          <option value="">{t('meliCase.selectOption')}</option>
                           <option value="male">{t('meliCase.genderMale')}</option>
                           <option value="female">{t('meliCase.genderFemale')}</option>
                           <option value="other">{t('meliCase.genderOther')}</option>
@@ -173,17 +240,18 @@ export default function MeliITCase() {
                 </motion.div>
 
                 <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}>
-                  <div className="mt-6">
-                    <label className="block text-sm font-medium mb-2">{t('meliCase.availability')}</label>
-                    <div className="flex flex-wrap gap-4">
-                      {[t('meliCase.morning'), t('meliCase.afternoon'), t('meliCase.night')].map(shift => (
-                        <label key={shift} className="flex items-center gap-2 cursor-pointer">
-                          <input type="radio" name="availability" value={shift.toLowerCase()} onChange={handleChange} required className="w-4 h-4 text-accent" />
-                          <span>{shift}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
+              <div className="mt-6">
+                <label className="block text-sm font-medium mb-2">{t('meliCase.availability')}</label>
+                <div className="flex flex-wrap gap-4">
+                  {[t('meliCase.morning'), t('meliCase.afternoon'), t('meliCase.night')].map(shift => (
+                    <label key={shift} className={`flex items-center gap-2 cursor-pointer p-2 rounded-lg border transition-colors ${formData.availability === shift.toLowerCase() ? 'border-accent bg-accent/10' : 'border-[var(--panel-border)] hover:bg-black/5 dark:hover:bg-white/5'}`}>
+                      <input type="radio" name="availability" value={shift.toLowerCase()} onChange={handleChange} required className="w-4 h-4 text-accent" />
+                      <span>{shift}</span>
+                    </label>
+                  ))}
+                </div>
+                {errors.availability && <p className="text-red-500 text-xs mt-1">Required</p>}
+              </div>
                 </motion.div>
 
                 <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.1 }}>
@@ -200,10 +268,23 @@ export default function MeliITCase() {
                   </div>
                 </motion.div>
 
+                {submitError && (
+                  <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-sm text-center mt-4">
+                    {submitError}
+                  </motion.p>
+                )}
                 <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.2 }}>
-                  <button type="submit" className="btn w-full mt-8 text-lg">
+                  <button type="submit" disabled={submitting} className="btn w-full mt-8 text-lg disabled:opacity-50 disabled:cursor-not-allowed">
                     <FaBriefcase className="mr-2" />
-                    {t('meliCase.submit')}
+                    {submitting ? (
+                      <span className="flex items-center gap-2">
+                        <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        {t('meliCase.uploading') || 'Submitting...'}
+                      </span>
+                    ) : t('meliCase.submit')}
                   </button>
                 </motion.div>
               </form>

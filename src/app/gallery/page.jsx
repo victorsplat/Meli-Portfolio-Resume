@@ -64,8 +64,16 @@ export default function GalleryPage() {
         </motion.div>
 
         {loading ? (
-          <div className="text-center py-20">
-            <div className="text-xl text-muted animate-pulse">{t('gallery.loading')}</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1,2,3,4,5,6].map((i) => (
+              <div key={i} className="card overflow-hidden">
+                <div className="aspect-square skeleton" />
+                <div className="mt-4 space-y-2">
+                  <div className="h-5 w-2/3 skeleton" />
+                  <div className="h-4 w-full skeleton" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : images.length === 0 ? (
           <div className="text-center py-20">

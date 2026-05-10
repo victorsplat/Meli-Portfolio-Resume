@@ -1,6 +1,5 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import { IoSunnyOutline, IoMoonOutline } from 'react-icons/io5';
 import { useTheme } from '@/lib/useTheme';
 import { useI18n } from '@/lib/i18n';
