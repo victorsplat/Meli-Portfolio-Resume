@@ -47,12 +47,20 @@ export async function POST(request) {
       return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
-    const buffer = Buffer.from(image.split(',')[1], 'base64');
-    const webpBuffer = await sharp(buffer)
-      .resize(1200, 1200, { fit: 'inside', withoutEnlargement: true })
-      .webp({ quality: 80 })
-      .toBuffer();
-    const processedImage = `data:image/webp;base64,${webpBuffer.toString('base64')}`;
+    let processedImage = image;
+    try {
+      const base64Data = image.split(',')[1];
+      if (base64Data) {
+        const buffer = Buffer.from(base64Data, 'base64');
+        const webpBuffer = await sharp(buffer)
+          .resize(1200, 1200, { fit: 'inside', withoutEnlargement: true })
+          .webp({ quality: 80 })
+          .toBuffer();
+        processedImage = `data:image/webp;base64,${webpBuffer.toString('base64')}`;
+      }
+    } catch (sharpError) {
+      console.error('Sharp processing failed, using original image:', sharpError);
+    }
 
     const client = await clientPromise;
     const db = client.db('gallery');
@@ -68,7 +76,8 @@ export async function POST(request) {
     return NextResponse.json({ success: true, id: result.insertedId });
   } catch (error) {
     console.error('Error adding image:', error);
-    return NextResponse.json({ error: 'Failed to add image' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to add image';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
