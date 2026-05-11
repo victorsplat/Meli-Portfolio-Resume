@@ -14,7 +14,9 @@ export async function GET(_request) {
     return NextResponse.json(images.map((doc) => ({
       ...doc,
       url: typeof doc.url === 'string' && doc.url.startsWith('data:') ? doc.url : doc.url,
-      _id: doc._id.toString()
+      _id: doc._id.toString(),
+      category: doc.category || 'others',
+      featured: doc.featured === true
     })));
   } catch (error) {
     console.error('Error fetching images:', error);
@@ -37,7 +39,7 @@ export async function POST(request) {
 
   try {
     const body = await request.json();
-    const { image, title, description } = body;
+    const { image, title, description, category, featured } = body;
 
     if (!image) {
       return NextResponse.json({ error: 'Image is required' }, { status: 400 });
@@ -47,6 +49,9 @@ export async function POST(request) {
     if (!validation.valid) {
       return NextResponse.json({ error: validation.error }, { status: 400 });
     }
+
+    const validCategories = ['design', 'aboutMe', 'skate', 'drinks', 'food', 'others'];
+    const safeCategory = validCategories.includes(category) ? category : 'others';
 
     let processedImage = image;
     try {
@@ -71,6 +76,8 @@ export async function POST(request) {
       url: processedImage,
       title: sanitize(title || ''),
       description: sanitize(description || ''),
+      category: safeCategory,
+      featured: featured === true,
       createdAt: new Date()
     });
 

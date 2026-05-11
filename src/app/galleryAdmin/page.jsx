@@ -9,6 +9,7 @@ import PageHeader from '@/components/PageHeader';
 import GalleryLightbox from '@/components/GalleryLightbox';
 
 const AUTH_KEY = 'gallery_admin_token';
+const MAX_FILES = 20;
 
 export default function GalleryAdmin() {
   const { t } = useI18n();
@@ -20,9 +21,12 @@ export default function GalleryAdmin() {
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [preview, setPreview] = useState(null);
+  const [category, setCategory] = useState('others');
+  const [featured, setFeatured] = useState(false);
+  const [files, setFiles] = useState([]);
   const [selectedImage, setSelectedImage] = useState(null);
   const fileInputRef = useRef(null);
   const passwordRef = useRef(null);
@@ -96,6 +100,10 @@ export default function GalleryAdmin() {
 
   function compressImage(file, maxDim = 1200, quality = 0.8) {
     return new Promise((resolve, reject) => {
+      if (file.size > 10 * 1024 * 1024) {
+        reject(new Error(`"${file.name}" exceeds 10MB`));
+        return;
+      }
       const reader = new FileReader();
       reader.onload = (e) => {
         const img = new Image();
@@ -117,7 +125,7 @@ export default function GalleryAdmin() {
           ctx.drawImage(img, 0, 0, width, height);
           canvas.toBlob((blob) => {
             const fr = new FileReader();
-            fr.onload = () => resolve(fr.result);
+            fr.onload = () => resolve({ name: file.name, preview: fr.result });
             fr.onerror = reject;
             fr.readAsDataURL(blob);
           }, 'image/jpeg', quality);
@@ -131,49 +139,75 @@ export default function GalleryAdmin() {
   }
 
   async function handleFileSelect(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      alert('Image too large (max 10MB)');
+    const selected = Array.from(e.target.files).slice(0, MAX_FILES);
+    if (selected.length === 0) return;
+
+    const oversized = selected.filter(f => f.size > 10 * 1024 * 1024);
+    if (oversized.length > 0) {
+      alert(`Some files exceed 10MB:\n${oversized.map(f => `- ${f.name}`).join('\n')}`);
       e.target.value = '';
       return;
     }
-    try {
-      const compressed = await compressImage(file);
-      setPreview(compressed);
-    } catch {
-      alert('Failed to process image');
-      e.target.value = '';
+
+    const compressed = [];
+    for (const file of selected) {
+      try {
+        const result = await compressImage(file);
+        compressed.push({ id: `${Date.now()}-${compressed.length}`, ...result });
+      } catch (err) {
+        alert(err.message);
+        e.target.value = '';
+        return;
+      }
     }
+
+    setFiles(prev => [...prev, ...compressed].slice(0, MAX_FILES));
+    e.target.value = '';
+  }
+
+  function removeFile(id) {
+    setFiles(prev => prev.filter(f => f.id !== id));
   }
 
   async function handleUpload() {
-    if (!preview) return;
+    if (files.length === 0) return;
 
     setUploading(true);
-    try {
-      const res = await fetch('/api/gallery', {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ image: preview, title, description })
-      });
+    setUploadProgress({ current: 0, total: files.length });
+    const errors = [];
 
-      if (res.ok) {
-        setTitle('');
-        setDescription('');
-        setPreview(null);
-        if (fileInputRef.current) fileInputRef.current.value = '';
-        fetchImages();
-      } else {
-        const data = await res.json();
-        alert(data.error || t('galleryAdmin.uploadFailed'));
+    for (let i = 0; i < files.length; i++) {
+      setUploadProgress({ current: i + 1, total: files.length });
+      try {
+        const res = await fetch('/api/gallery', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            image: files[i].preview,
+            title,
+            description,
+            category,
+            featured
+          })
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          errors.push(`"${files[i].name}": ${data.error || t('galleryAdmin.uploadFailed')}`);
+        }
+      } catch (error) {
+        errors.push(`"${files[i].name}": ${error.message}`);
       }
-    } catch (error) {
-      console.error('Error uploading:', error);
-      alert(t('galleryAdmin.uploadError'));
-    } finally {
-      setUploading(false);
     }
+
+    setUploading(false);
+    setUploadProgress({ current: 0, total: 0 });
+
+    if (errors.length > 0) {
+      alert(`Upload completed with errors:\n${errors.join('\n')}`);
+    }
+
+    setFiles([]);
+    fetchImages();
   }
 
   async function handleDelete(id) {
@@ -266,22 +300,32 @@ export default function GalleryAdmin() {
               <input
                 ref={fileInputRef}
                 type="file"
+                multiple
                 accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
                 onChange={handleFileSelect}
                 className="w-full p-3 border border-[var(--panel-border)] rounded-lg bg-white/50 dark:bg-white/5"
               />
-              <p className="text-xs text-muted mt-1">Max 10MB. Accepted: JPEG, PNG, WebP, GIF, AVIF</p>
+              <p className="text-xs text-muted mt-1">{t('galleryAdmin.fileLimit')}</p>
             </div>
 
-            {preview && (
-              <div className="relative aspect-square max-w-xs mx-auto rounded-lg overflow-hidden">
-                <img src={preview} alt="Preview" className="w-full h-full object-cover" />
-                <button
-                  onClick={() => { setPreview(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
-                  className="absolute top-2 right-2 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-red-600"
-                >
-                  ✕
-                </button>
+            {/* File Previews */}
+            {files.length > 0 && (
+              <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+                {files.map((f) => (
+                  <div key={f.id} className="relative aspect-square rounded-lg overflow-hidden group">
+                    <img src={f.preview} alt="" className="w-full h-full object-cover" />
+                    <button
+                      onClick={() => removeFile(f.id)}
+                      disabled={uploading}
+                      className="absolute top-1 right-1 bg-red-500/90 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity disabled:hidden"
+                    >
+                      ✕
+                    </button>
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] px-1 py-0.5 truncate">
+                      {f.name}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
 
@@ -306,15 +350,64 @@ export default function GalleryAdmin() {
               />
             </div>
 
+            <div>
+              <label className="block text-sm font-medium mb-2">{t('galleryAdmin.category')}</label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="input"
+              >
+                <option value="design">{t('galleryAdmin.categoryDesign')}</option>
+                <option value="aboutMe">{t('galleryAdmin.categoryAboutMe')}</option>
+                <option value="skate">{t('galleryAdmin.categorySkate')}</option>
+                <option value="drinks">{t('galleryAdmin.categoryDrinks')}</option>
+                <option value="food">{t('galleryAdmin.categoryFood')}</option>
+                <option value="others">{t('galleryAdmin.categoryOthers')}</option>
+              </select>
+            </div>
+
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={featured}
+                onChange={(e) => setFeatured(e.target.checked)}
+                className="w-5 h-5 rounded border-panel-border accent-[#FFE600]"
+              />
+              <span className="text-sm font-medium">{t('galleryAdmin.markFeatured')}</span>
+            </label>
+
+            {/* Upload Progress */}
+            {uploading && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs text-muted">
+                  <span>{t('galleryAdmin.uploadProgress', { current: uploadProgress.current, total: uploadProgress.total })}</span>
+                  <span>{Math.round((uploadProgress.current / uploadProgress.total) * 100)}%</span>
+                </div>
+                <div className="w-full h-2 bg-panel-border rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
+                    className="h-full bg-gradient-to-r from-[#FFE600] to-[#2D3277] rounded-full"
+                    transition={{ duration: 0.3 }}
+                  />
+                </div>
+              </div>
+            )}
+
             <button
               onClick={handleUpload}
-              disabled={!preview || uploading}
+              disabled={files.length === 0 || uploading}
               className="btn w-full disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {uploading ? t('galleryAdmin.uploading') : t('galleryAdmin.upload')}
+              {uploading
+                ? t('galleryAdmin.uploading')
+                : files.length > 0
+                  ? t('galleryAdmin.uploadAll', { count: files.length })
+                  : t('galleryAdmin.upload')}
             </button>
+
             <p className="text-xs text-muted text-center mt-3">
-              Rate limit: 20 uploads/deletions per minute per IP
+              {t('galleryAdmin.rateLimit')}
             </p>
           </div>
         </motion.div>
@@ -343,10 +436,15 @@ export default function GalleryAdmin() {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
-                  className="card p-3 cursor-pointer group"
+                  className="card p-3 cursor-pointer group relative"
                   onClick={() => setSelectedImage(img)}
                   layout
                 >
+                  {img.featured && (
+                    <span className="absolute top-5 right-5 bg-[#FFE600] text-[#111827] text-[10px] font-bold px-2 py-0.5 rounded-full z-10">
+                      ★ {t('galleryAdmin.featured')}
+                    </span>
+                  )}
                   <div className="aspect-square rounded-lg overflow-hidden mb-3">
                     <img
                       src={img.url}
@@ -354,11 +452,16 @@ export default function GalleryAdmin() {
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  {img.title && (
-                    <h3 className="text-sm font-medium truncate text-accent dark:text-white">
-                      {img.title}
-                    </h3>
-                  )}
+                  <div className="flex items-center gap-2 mb-1">
+                    {img.title && (
+                      <h3 className="text-sm font-medium truncate text-accent dark:text-white flex-1">
+                        {img.title}
+                      </h3>
+                    )}
+                    <span className="text-[10px] uppercase tracking-wider text-muted bg-white/20 dark:bg-white/10 px-1.5 py-0.5 rounded">
+                      {t('galleryAdmin.category' + img.category.charAt(0).toUpperCase() + img.category.slice(1))}
+                    </span>
+                  </div>
                   <p className="text-xs text-muted truncate">{img.description}</p>
                 </motion.div>
               ))}
