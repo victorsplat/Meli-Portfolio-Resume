@@ -64,16 +64,27 @@ src/
 
 ## Session History (May 10 2026)
 
-### What was done today
+### What was done on May 10
 - **Client-side image compression** (`galleryAdmin/page.jsx`): Canvas resizes to max 1200px, JPEG q0.8 before upload — avoids Vercel's 4.5MB body limit and MongoDB's 16MB doc limit
 - **Sharp server-side re-encoding** (`api/gallery/route.js`): Re-encodes uploaded images to WebP q80 for efficient storage. Wrapped in try-catch — falls back to original client-compressed JPEG if Sharp fails
 - **Error logging improved**: Both GET/POST routes now return `error.name: error.message` instead of generic messages, making debugging easier
 - **Gallery GET resilience**: Handles documents with missing/null `url` field without crashing
-- **Root cause of TLS error (`alert 80`)**: Vercel serverless IP not whitelisted in MongoDB Atlas. Fixed by adding `0.0.0.0/0` to Atlas Network Access. Vercel env vars (`MONGODB_URI`, `ADMIN_API_KEY`) must also be set manually (Vercel ignores `.env.local`)
-- **Security**: `.env.local` removed from git tracking; `.gitignore` updated from `.env` to `.env*` to prevent future leaks
+- **Root cause of TLS error (`alert 80`)**: Vercel serverless IP not whitelisted in MongoDB Atlas. Fixed by adding `0.0.0.0/0` to Atlas Network Access.
+- **Security**: `.env.local` removed from git tracking; `.gitignore` updated from `.env` to `.env*`
+
+### What was done on May 11
+- **Gallery page redesign**: MELI-branded hero with featured image, stats bar, "About My Work" glass card story section, category filter pills (MELI yellow active), varied aspect-ratio grid (`4/3`, `3/4`, `16/9`, `square`)
+- **Gallery CMS Dashboard** (`/galleryAdmin/dashboard`): Edit Hero, About Me, Footer content in EN/ES/PT with 3-column layout. Free auto-translate via LibreTranslate public API (no key needed). Admin-protected with same Bearer token auth.
+- **Settings API** (`/api/gallery/settings`): GET/PUT for gallery content stored in MongoDB `gallery.settings` collection (single doc, upsert pattern)
+- **Multi-file upload**: Admin supports up to 20 simultaneous uploads with sequential progress bar, per-file error collection
+- **New categories**: `design`, `about-me`, `skate`, `drinks`, `food`, `others` (removed `photography`, `development`, `other`)
+- **i18n improvements**: `t()` function now supports `{param}` interpolation for progress display; rate limit text properly translated
+- **GalleryLightbox**: Shows category emoji + label overlay, featured badge on featured images
+- **Bug fixes**: Hero image visibility for cached images (init `heroLoaded: true`); About section always visible with i18n fallback; Dashboard error state with retry on failed settings fetch
+- **Lint**: Added `Buffer`/`Image` globals to eslint config; removed unused `PageHeader` import from gallery page; removed unused `authChecking` state from dashboard
 
 ### Pending / Known Issues
-- Gallery stores images as base64 in MongoDB (works with Canvas+Sharp compression, but suboptimal). **Planned migration** to Supabase/Cloudinary for proper image hosting (tomorrow, May 11)
+- Gallery stores images as base64 in MongoDB — works but suboptimal. Planned future migration to Supabase/Cloudinary.
 
 ## Environment Variables (.env.local — NOT in git)
 ```

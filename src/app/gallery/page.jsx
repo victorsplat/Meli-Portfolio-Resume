@@ -26,7 +26,7 @@ export default function GalleryPage() {
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
   const [activeCategory, setActiveCategory] = useState('all');
-  const [heroLoaded, setHeroLoaded] = useState(false);
+  const [heroLoaded, setHeroLoaded] = useState(true);
 
   function getSetting(path) {
     if (!settings) return '';
@@ -195,7 +195,7 @@ export default function GalleryPage() {
         )}
 
         {/* About Me Section */}
-        {!loading && (getSetting('aboutMe.title') || getSetting('aboutMe.text')) && (
+        {!loading && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

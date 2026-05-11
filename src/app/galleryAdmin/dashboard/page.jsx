@@ -58,6 +58,7 @@ export default function DashboardPage() {
   const [passwordInput, setPasswordInput] = useState('');
   const [authError, setAuthError] = useState('');
   const [settings, setSettings] = useState(null);
+  const [settingsError, setSettingsError] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
   const [translating, setTranslating] = useState({});
@@ -72,12 +73,15 @@ export default function DashboardPage() {
   }, []);
 
   async function fetchSettings() {
+    setSettingsError('');
     try {
       const res = await fetch('/api/gallery/settings');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setSettings(data);
     } catch (error) {
       console.error('Error fetching settings:', error);
+      setSettingsError('Failed to load settings. Make sure you are connected to the internet and the server is running.');
     }
   }
 
@@ -199,6 +203,18 @@ export default function DashboardPage() {
             <Link href="/" className="text-sm text-accent hover:underline">Back to Home</Link>
           </div>
         </motion.div>
+      </div>
+    );
+  }
+
+  if (settingsError) {
+    return (
+      <div className="min-h-screen bg-bg-app flex items-center justify-center">
+        <div className="card max-w-md w-full mx-4 p-8 text-center">
+          <div className="text-4xl mb-4">⚠️</div>
+          <p className="text-muted mb-4">{settingsError}</p>
+          <button onClick={fetchSettings} className="btn">Retry</button>
+        </div>
       </div>
     );
   }
