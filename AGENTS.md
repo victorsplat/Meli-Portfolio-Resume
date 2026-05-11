@@ -62,11 +62,27 @@ src/
 - `--bg-hero`: `#ebebed` (light), `#121b29` (dark)
 - `--text-main`: `#111827` (light), `#f9fafb` (dark)
 
-## Pending / Known Issues
-- (none currently tracked)
+## Session History (May 10 2026)
 
-## Environment Variables (.env.local)
+### What was done today
+- **Client-side image compression** (`galleryAdmin/page.jsx`): Canvas resizes to max 1200px, JPEG q0.8 before upload — avoids Vercel's 4.5MB body limit and MongoDB's 16MB doc limit
+- **Sharp server-side re-encoding** (`api/gallery/route.js`): Re-encodes uploaded images to WebP q80 for efficient storage. Wrapped in try-catch — falls back to original client-compressed JPEG if Sharp fails
+- **Error logging improved**: Both GET/POST routes now return `error.name: error.message` instead of generic messages, making debugging easier
+- **Gallery GET resilience**: Handles documents with missing/null `url` field without crashing
+- **Root cause of TLS error (`alert 80`)**: Vercel serverless IP not whitelisted in MongoDB Atlas. Fixed by adding `0.0.0.0/0` to Atlas Network Access. Vercel env vars (`MONGODB_URI`, `ADMIN_API_KEY`) must also be set manually (Vercel ignores `.env.local`)
+- **Security**: `.env.local` removed from git tracking; `.gitignore` updated from `.env` to `.env*` to prevent future leaks
+
+### Pending / Known Issues
+- Gallery stores images as base64 in MongoDB (works with Canvas+Sharp compression, but suboptimal). **Planned migration** to Supabase/Cloudinary for proper image hosting (tomorrow, May 11)
+
+## Environment Variables (.env.local — NOT in git)
 ```
-MONGODB_URI=...
+MONGODB_URI=mongodb+srv://victorsplat_db:44112841Pan@cluster0.aqnrrlq.mongodb.net/?appName=Cluster0
 ADMIN_API_KEY=meli-admin-2024-secure-key
 ```
+> `MONGODB_URI` and `ADMIN_API_KEY` must be set manually in Vercel dashboard → Environment Variables. `.env.local` is gitignored and not loaded by Vercel.
+
+## Known Vercel/Deployment Constraints
+- **Vercel ignores `.env.local`** — all secrets must be set in Vercel dashboard
+- **Atlas IP whitelist** must include `0.0.0.0/0` for Vercel (dynamic IPs)
+- **Client-side Canvas compression** (1200px max, JPEG q0.8) is necessary to stay under Vercel's 4.5MB serverless body limit
