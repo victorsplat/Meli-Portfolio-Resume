@@ -1,19 +1,20 @@
 import { MongoClient } from 'mongodb';
 
-const uri = process.env.MONGODB_URI;
+let cachedPromise = null;
 
-let client;
-let clientPromise;
+export default function getClient() {
+  if (!cachedPromise) {
+    const uri = process.env.MONGODB_URI;
+    const client = new MongoClient(uri);
 
-if (process.env.NODE_ENV === 'development') {
-  if (!global._mongoClientPromise) {
-    client = new MongoClient(uri);
-    global._mongoClientPromise = client.connect();
+    if (process.env.NODE_ENV === 'development') {
+      if (!global._mongoClientPromise) {
+        global._mongoClientPromise = client.connect();
+      }
+      cachedPromise = global._mongoClientPromise;
+    } else {
+      cachedPromise = client.connect();
+    }
   }
-  clientPromise = global._mongoClientPromise;
-} else {
-  client = new MongoClient(uri);
-  clientPromise = client.connect();
+  return cachedPromise;
 }
-
-export default clientPromise;

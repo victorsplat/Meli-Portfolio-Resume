@@ -82,6 +82,7 @@ src/
 - **GalleryLightbox**: Shows category emoji + label overlay, featured badge on featured images
 - **Bug fixes**: Hero image visibility for cached images (init `heroLoaded: true`); About section always visible with i18n fallback; Dashboard error state with retry on failed settings fetch
 - **Lint**: Added `Buffer`/`Image` globals to eslint config; removed unused `PageHeader` import from gallery page; removed unused `authChecking` state from dashboard
+- **Vercel build fix**: Refactored `mongodb.js` to lazy-init pattern — MongoDB connection no longer fires at module import time (was causing `Failed to collect page data for /api/applications` during build). Updated all 3 API routes to use the lazy getter.
 
 ### Pending / Known Issues
 - Gallery stores images as base64 in MongoDB — works but suboptimal. Planned future migration to Supabase/Cloudinary.

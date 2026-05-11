@@ -1,4 +1,4 @@
-import clientPromise from '@/lib/mongodb';
+import getClient from '@/lib/mongodb';
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { sanitize, validateImage } from '@/lib/validate';
@@ -7,7 +7,7 @@ import sharp from 'sharp';
 
 export async function GET(_request) {
   try {
-    const client = await clientPromise;
+    const client = await getClient();
     const db = client.db('gallery');
     const collection = db.collection('images');
     const images = await collection.find({}).sort({ createdAt: -1 }).toArray();
@@ -68,7 +68,7 @@ export async function POST(request) {
       console.error('Sharp processing failed, using original image:', sharpError);
     }
 
-    const client = await clientPromise;
+    const client = await getClient();
     const db = client.db('gallery');
     const collection = db.collection('images');
 
@@ -109,7 +109,7 @@ export async function DELETE(request) {
       return NextResponse.json({ error: 'Image ID is required' }, { status: 400 });
     }
 
-    const client = await clientPromise;
+    const client = await getClient();
     const db = client.db('gallery');
     const collection = db.collection('images');
 

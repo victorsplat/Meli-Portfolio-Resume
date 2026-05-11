@@ -1,4 +1,4 @@
-import clientPromise from '@/lib/mongodb';
+import getClient from '@/lib/mongodb';
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { sanitize } from '@/lib/validate';
@@ -39,7 +39,7 @@ function sanitizeSettings(body) {
 
 export async function GET() {
   try {
-    const client = await clientPromise;
+    const client = await getClient();
     const db = client.db('gallery');
     const collection = db.collection('settings');
     const doc = await collection.findOne({ _id: 'main' });
@@ -66,7 +66,7 @@ export async function PUT(request) {
     const body = await request.json();
     const data = sanitizeSettings(body);
 
-    const client = await clientPromise;
+    const client = await getClient();
     const db = client.db('gallery');
     const collection = db.collection('settings');
 

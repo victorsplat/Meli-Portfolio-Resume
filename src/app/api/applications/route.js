@@ -1,4 +1,4 @@
-import clientPromise from '@/lib/mongodb';
+import getClient from '@/lib/mongodb';
 import { NextResponse } from 'next/server';
 import { validateApplication } from '@/lib/validate';
 import { rateLimit, getClientIp } from '@/lib/rateLimit';
@@ -25,7 +25,7 @@ export async function POST(request) {
 
     const { sanitized } = validation;
 
-    const client = await clientPromise;
+    const client = await getClient();
     const db = client.db('meli');
     const collection = db.collection('applications');
 
