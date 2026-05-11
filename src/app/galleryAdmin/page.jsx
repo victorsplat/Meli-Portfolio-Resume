@@ -281,6 +281,9 @@ export default function GalleryAdmin() {
             <Link href="/gallery" className="btn btn-sm btn-secondary">
               {t('galleryAdmin.viewGallery')}
             </Link>
+            <Link href="/galleryAdmin/dashboard" className="btn btn-sm" style={{ background: 'linear-gradient(135deg, #FFE600, #FFC000)', color: '#111827' }}>
+              📋 Dashboard
+            </Link>
             <button onClick={handleLogout} className="btn btn-sm !bg-red-500 hover:!bg-red-600">
               Logout
             </button>

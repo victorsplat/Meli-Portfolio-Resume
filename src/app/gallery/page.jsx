@@ -22,25 +22,42 @@ export default function GalleryPage() {
   const { t, lang } = useI18n();
   usePageTitle('gallery.title');
   const [images, setImages] = useState([]);
+  const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
   const [activeCategory, setActiveCategory] = useState('all');
   const [heroLoaded, setHeroLoaded] = useState(false);
 
+  function getSetting(path) {
+    if (!settings) return '';
+    const keys = path.split('.');
+    let val = settings;
+    for (const key of keys) {
+      if (!val) return '';
+      val = val[key];
+    }
+    if (typeof val === 'object' && val !== null) return val[lang] || val.en || '';
+    return val || '';
+  }
+
   useEffect(() => {
-    async function fetchImages() {
+    async function fetchData() {
       try {
-        const res = await fetch('/api/gallery');
-        const data = await res.json();
-        if (data.error) throw new Error(data.error);
-        setImages(data);
+        const [imgRes, setRes] = await Promise.all([
+          fetch('/api/gallery'),
+          fetch('/api/gallery/settings'),
+        ]);
+        const imgData = await imgRes.json();
+        if (!imgData.error) setImages(imgData);
+        const setData = await setRes.json();
+        if (!setData.error) setSettings(setData);
       } catch (error) {
-        console.error('Error fetching images:', error);
+        console.error('Error fetching data:', error);
       } finally {
         setLoading(false);
       }
     }
-    fetchImages();
+    fetchData();
   }, []);
 
   const featuredImage = useMemo(() => {
@@ -115,11 +132,11 @@ export default function GalleryPage() {
                   </span>
                 )}
                 <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 leading-tight">
-                  {featuredImage.title || t('gallery.title')}
+                  {featuredImage.title || getSetting('hero.title') || t('gallery.title')}
                 </h1>
-                {featuredImage.description && (
+                {(featuredImage.description || getSetting('hero.subtitle')) && (
                   <p className="text-gray-300 text-lg md:text-xl max-w-xl leading-relaxed">
-                    {featuredImage.description}
+                    {featuredImage.description || getSetting('hero.subtitle')}
                   </p>
                 )}
                 <div className="flex items-center gap-3 mt-6">
@@ -177,8 +194,8 @@ export default function GalleryPage() {
           </motion.div>
         )}
 
-        {/* Story Section */}
-        {!loading && (
+        {/* About Me Section */}
+        {!loading && (getSetting('aboutMe.title') || getSetting('aboutMe.text')) && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -186,10 +203,10 @@ export default function GalleryPage() {
             className="card-glass max-w-3xl mx-auto mb-12 text-center"
           >
             <h2 className="text-2xl font-bold text-accent dark:text-[#FFE600] mb-4">
-              {t('gallery.aboutTitle')}
+              {getSetting('aboutMe.title') || t('gallery.aboutTitle')}
             </h2>
-            <p className="text-muted leading-relaxed">
-              {t('gallery.aboutText')}
+            <p className="text-muted leading-relaxed whitespace-pre-line">
+              {getSetting('aboutMe.text') || t('gallery.aboutText')}
             </p>
           </motion.div>
         )}
@@ -358,6 +375,18 @@ export default function GalleryPage() {
           </AnimatePresence>
         )}
       </div>
+
+      {/* Footer */}
+      {!loading && getSetting('footer.text') && (
+        <motion.footer
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.6 }}
+          className="container pb-8 text-center"
+        >
+          <p className="text-muted text-sm">{getSetting('footer.text')}</p>
+        </motion.footer>
+      )}
 
       <GalleryLightbox
         image={selectedImage}
