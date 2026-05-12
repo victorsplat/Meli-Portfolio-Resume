@@ -1,6 +1,5 @@
 import '@styles/styles.css';
 import Providers from '@/components/Providers';
-import Script from 'next/script';
 
 export const metadata = {
   title: 'Meli Portfolio',
@@ -10,10 +9,16 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+(function(){try{var t=localStorage.getItem('theme');if(t==='dark')document.documentElement.classList.add('dark')}catch(e){}})();
+`
+          }}
+        />
+      </head>
       <body>
-        <Script id="theme-init" strategy="beforeInteractive">
-          {`document.documentElement.classList.toggle('dark', localStorage.getItem('theme') === 'dark')`}
-        </Script>
         <Providers>
           {children}
         </Providers>
