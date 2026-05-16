@@ -7,8 +7,9 @@ import { useI18n } from '@/lib/i18n';
 import { usePageTitle } from '@/lib/usePageTitle';
 import { useAuthStore } from '@/lib/stores/authStore';
 import { useGalleryStore } from '@/lib/stores/galleryStore';
-import { useGalleryImages, useUploadImage, useDeleteImage, useGallerySettings } from '@/hooks/useGallery';
-import GalleryLightbox from '@/components/GalleryLightbox';
+import { useGalleryImages, useUploadImage, useDeleteImage, useUpdateImage, useGallerySettings } from '@/hooks/useGallery';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 const MAX_FILES = 20;
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
@@ -29,6 +30,7 @@ export default function GalleryAdmin() {
   const { data: settings } = useGallerySettings();
   const uploadMutation = useUploadImage();
   const deleteMutation = useDeleteImage();
+  const updateMutation = useUpdateImage();
 
   const [passwordInput, setPasswordInput] = useState('');
   const [authError, setAuthError] = useState('');
@@ -224,6 +226,36 @@ export default function GalleryAdmin() {
       alert(`Upload completed with errors:\n${errors.join('\n')}`);
     }
     setFiles([]);
+  }
+
+  const [editTitle, setEditTitle] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [editCategory, setEditCategory] = useState('');
+  const [editFeatured, setEditFeatured] = useState(false);
+
+  useEffect(() => {
+    if (selectedImage) {
+      setEditTitle(selectedImage.title || '');
+      setEditDesc(selectedImage.description || '');
+      setEditCategory(selectedImage.category || '');
+      setEditFeatured(selectedImage.featured || false);
+    }
+  }, [selectedImage]);
+
+  async function handleUpdate() {
+    if (!selectedImage) return;
+    try {
+      await updateMutation.mutateAsync({
+        id: selectedImage._id,
+        title: editTitle,
+        description: editDesc,
+        category: editCategory,
+        featured: editFeatured,
+      });
+      setSelectedImage(null);
+    } catch (error) {
+      alert('Failed to update: ' + error.message);
+    }
   }
 
   async function handleDelete(id) {
@@ -455,14 +487,117 @@ export default function GalleryAdmin() {
         )}
       </div>
 
-      <GalleryLightbox
-        image={selectedImage}
-        onClose={() => setSelectedImage(null)}
-        onDelete={handleDelete}
-        deleteLabel={t('galleryAdmin.delete')}
-        categoryLabel={selectedImage ? getCategoryName(selectedImage.category) : ''}
-        categoryEmoji={selectedImage ? categories.find(c => c.id === selectedImage.category)?.emoji || '📁' : ''}
-      />
+      {/* Edit Modal */}
+      <AnimatePresence>
+        {selectedImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+            onClick={() => setSelectedImage(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative max-w-2xl w-full bg-bg-app rounded-2xl shadow-2xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setSelectedImage(null)}
+                className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-black/30 text-white/70 hover:text-white hover:bg-black/50 transition z-10"
+              >
+                ✕
+              </button>
+
+              <div className="flex flex-col md:flex-row">
+                {/* Image preview */}
+                <div className="md:w-1/2 bg-black/20 flex items-center justify-center p-4">
+                  <img
+                    src={selectedImage.url}
+                    alt={selectedImage.title || ''}
+                    className="w-full h-auto max-h-[50vh] md:max-h-[60vh] object-contain rounded-lg"
+                  />
+                </div>
+
+                {/* Edit fields */}
+                <div className="md:w-1/2 p-5 space-y-4">
+                  <h2 className="text-lg font-bold text-accent dark:text-white">Edit Image</h2>
+
+                  <div>
+                    <label className="block text-xs font-medium text-muted mb-1">Title</label>
+                    <input
+                      type="text"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      placeholder="Image title"
+                      className="input text-sm w-full"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-muted mb-1">Description</label>
+                    <textarea
+                      value={editDesc}
+                      onChange={(e) => setEditDesc(e.target.value)}
+                      placeholder="Image description"
+                      className="input text-sm w-full min-h-[80px] resize-none"
+                      rows={3}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-muted mb-1">Category</label>
+                    <select
+                      value={editCategory}
+                      onChange={(e) => setEditCategory(e.target.value)}
+                      className="input text-sm w-full"
+                    >
+                      {categories.map((cat) => {
+                        const count = imageCountByCategory[cat.id] || 0;
+                        return (
+                          <option key={cat.id} value={cat.id}>
+                            {cat.emoji} {cat.name?.en || cat.id} ({count})
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+
+                  <label className="flex items-center gap-3 cursor-pointer pt-1">
+                    <input
+                      type="checkbox"
+                      checked={editFeatured}
+                      onChange={(e) => setEditFeatured(e.target.checked)}
+                      className="w-4 h-4 rounded border-panel-border accent-[#FFE600]"
+                    />
+                    <span className="text-sm font-medium text-muted">Mark as featured</span>
+                  </label>
+
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      onClick={handleUpdate}
+                      disabled={updateMutation.isPending}
+                      className="flex-1"
+                    >
+                      {updateMutation.isPending ? 'Saving...' : '💾 Save'}
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => handleDelete(selectedImage._id)}
+                      disabled={deleteMutation.isPending}
+                      className="flex-shrink-0"
+                    >
+                      {deleteMutation.isPending ? '...' : '🗑 Delete'}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

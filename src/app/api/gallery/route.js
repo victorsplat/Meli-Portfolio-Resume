@@ -110,6 +110,63 @@ export async function POST(request) {
   }
 }
 
+export async function PUT(request) {
+  const auth = requireAdmin(request);
+  if (!auth.authorized) return auth.error;
+
+  const rl = rateLimit(getClientIp(request));
+  if (!rl.allowed) {
+    return NextResponse.json({ error: 'Too many requests' }, {
+      status: 429,
+      headers: { 'Retry-After': String(rl.retryAfter) }
+    });
+  }
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    if (!id) {
+      return NextResponse.json({ error: 'Image ID is required' }, { status: 400 });
+    }
+
+    const body = await request.json();
+    const { title, description, category, featured } = body;
+
+    const client = await getClient();
+    const db = client.db('gallery');
+
+    const settingsDoc = await db.collection('settings').findOne({ _id: 'main' });
+    const validCategories = settingsDoc?.data?.categories?.items?.map(c => c.id) || [];
+    const safeCategory = validCategories.includes(category) ? category : undefined;
+
+    const update = {};
+    if (title !== undefined) update.title = sanitize(title);
+    if (description !== undefined) update.description = sanitize(description);
+    if (safeCategory !== undefined) update.category = safeCategory;
+    if (featured !== undefined) update.featured = featured === true;
+
+    if (Object.keys(update).length === 0) {
+      return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
+    }
+
+    const { ObjectId } = await import('mongodb');
+    const result = await db.collection('images').updateOne(
+      { _id: new ObjectId(id) },
+      { $set: update }
+    );
+
+    if (result.matchedCount === 0) {
+      return NextResponse.json({ error: 'Image not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error updating image:', error);
+    const message = error instanceof Error ? `${error.name}: ${error.message}` : 'Failed to update image';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
 export async function DELETE(request) {
   const auth = requireAdmin(request);
   if (!auth.authorized) return auth.error;

@@ -54,6 +54,29 @@ export function useUploadImage() {
   });
 }
 
+export function useUpdateImage() {
+  const queryClient = useQueryClient();
+  const getAuthHeaders = useAuthStore((s) => s.getAuthHeaders);
+
+  return useMutation({
+    mutationFn: async ({ id, title, description, category, featured }) => {
+      const res = await fetch(`/api/gallery?id=${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ title, description, category, featured }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Update failed');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['gallery-images'] });
+    },
+  });
+}
+
 export function useDeleteImage() {
   const queryClient = useQueryClient();
   const getAuthHeaders = useAuthStore((s) => s.getAuthHeaders);
