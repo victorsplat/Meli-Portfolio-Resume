@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { useAuthStore } from '@/lib/stores/authStore';
-import { useGallerySettings, useGalleryImages, useUpdateSettings } from '@/hooks/useGallery';
+import { useGallerySettings, useGalleryImages, useUpdateSettings, useMigrateImage } from '@/hooks/useGallery';
 import { cn } from '@/lib/utils';
 
 const LANGUAGES = [
@@ -21,6 +21,7 @@ const TABS = [
   { id: 'categories', label: 'Categories', icon: '🏷️' },
   { id: 'aboutMe', label: 'About', icon: '👤' },
   { id: 'footer', label: 'Footer', icon: '📝' },
+  { id: 'storage', label: 'Storage', icon: '💾' },
 ];
 
 const HERO_POSITIONS = [
@@ -67,6 +68,9 @@ export default function DashboardPage() {
   const [newCategory, setNewCategory] = useState({ id: '', name: { en: '', es: '', pt: '' }, emoji: '📁' });
   const [showCategoryForm, setShowCategoryForm] = useState(false);
   const [editingCat, setEditingCat] = useState(null);
+  const migrateImage = useMigrateImage();
+  const [migratingMap, setMigratingMap] = useState({});
+  const [migratingAll, setMigratingAll] = useState(false);
 
   const passwordRef = useCallback((el) => el?.focus(), []);
 
@@ -305,8 +309,11 @@ export default function DashboardPage() {
               <p className="text-muted text-sm mt-1">Manage gallery content, images, and categories</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Link href="/galleryAdmin" className="btn btn-sm">← Image Manager</Link>
+              <Link href="/galleryAdmin" className="btn btn-sm">↑ Image Uploader</Link>
               <Link href="/gallery" className="btn btn-sm btn-secondary">View Gallery</Link>
+              <Button variant="secondary" size="sm" onClick={() => setTab('storage')}>
+                💾 Storage
+              </Button>
               <Button variant="destructive" size="sm" onClick={logout}>Logout</Button>
               <LanguageSwitcher />
             </div>
@@ -792,6 +799,164 @@ export default function DashboardPage() {
           </motion.div>
         )}
 
+        {/* === TAB: STORAGE === */}
+        {tab === 'storage' && (
+          <motion.div key="storage" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <div className="card">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-xl bg-[#FFE600]/20 flex items-center justify-center text-lg">💾</div>
+                <div>
+                  <h2 className="text-lg font-bold">Storage</h2>
+                  <p className="text-xs text-muted">Manage where your images are stored — migrate base64 images to Vercel Blob</p>
+                </div>
+              </div>
+
+              {!images ? (
+                <p className="text-sm text-muted py-6 text-center">Loading images...</p>
+              ) : (
+                <>
+                  {/* Storage Stats */}
+                  <div className="flex items-center gap-4 mb-6 pb-4 border-b border-panel-border">
+                    <div className="text-sm">
+                      <span className="font-semibold text-green-600">{images.filter((i) => i.url?.startsWith('https://')).length}</span>
+                      <span className="text-muted"> on Blob</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="font-semibold text-amber-600">{images.filter((i) => i.url?.startsWith('data:')).length}</span>
+                      <span className="text-muted"> on Base64</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="font-semibold">{images.length}</span>
+                      <span className="text-muted"> total</span>
+                    </div>
+                  </div>
+
+                  {/* Base64 images — need migration */}
+                  {images.filter((i) => i.url?.startsWith('data:')).length > 0 && (
+                    <div className="mb-8">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-sm font-semibold text-amber-600 flex items-center gap-2">
+                          <span>⚠️</span> Base64 Images — needs migration
+                        </h3>
+                        <div className="flex items-center gap-2">
+                          {migratingAll && (
+                            <span className="text-xs text-muted">
+                              {Object.values(migratingMap).filter((s) => s === 'done').length} / {images.filter((i) => i.url?.startsWith('data:')).length}
+                            </span>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={async () => {
+                              setMigratingAll(true);
+                              const base64Images = images.filter((i) => i.url?.startsWith('data:'));
+                              for (const img of base64Images) {
+                                if (migratingMap[img._id] === 'done') continue;
+                                setMigratingMap((p) => ({ ...p, [img._id]: 'loading' }));
+                                try {
+                                  await migrateImage.mutateAsync(img._id);
+                                  setMigratingMap((p) => ({ ...p, [img._id]: 'done' }));
+                                } catch {
+                                  setMigratingMap((p) => ({ ...p, [img._id]: 'error' }));
+                                }
+                              }
+                              setMigratingAll(false);
+                            }}
+                            disabled={migratingAll}
+                          >
+                            {migratingAll ? (
+                              <span className="flex items-center gap-1.5">
+                                <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                Migrating...
+                              </span>
+                            ) : (
+                              <span>↑ Migrate All ({images.filter((i) => i.url?.startsWith('data:')).length})</span>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="grid gap-3">
+                        {images.filter((i) => i.url?.startsWith('data:')).map((img) => (
+                          <div key={img._id} className="flex items-center gap-3 p-3 rounded-xl bg-amber-500/5 border border-amber-500/20">
+                            <div className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-white/30">
+                              <img src={img.url} alt="" className="w-full h-full object-cover" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">
+                                {img.title?.en || img.title?.pt || 'Untitled'}
+                              </p>
+                              <p className="text-[10px] text-muted truncate font-mono">
+                                {img.url?.slice(0, 60)}...
+                              </p>
+                              <p className="text-[10px] text-muted">
+                                {(img.url?.length * 0.75 / 1024 / 1024).toFixed(1)}MB estimated — {img.category || 'no category'}
+                              </p>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant={migratingMap[img._id] === 'error' ? 'destructive' : 'default'}
+                              onClick={async () => {
+                                setMigratingMap((p) => ({ ...p, [img._id]: 'loading' }));
+                                try {
+                                  await migrateImage.mutateAsync(img._id);
+                                  setMigratingMap((p) => ({ ...p, [img._id]: 'done' }));
+                                  setTimeout(() => setMigratingMap((p) => {
+                                    const next = { ...p };
+                                    delete next[img._id];
+                                    return next;
+                                  }), 3000);
+                                } catch {
+                                  setMigratingMap((p) => ({ ...p, [img._id]: 'error' }));
+                                }
+                              }}
+                              disabled={migratingMap[img._id] === 'loading' || migrateImage.isPending}
+                              className="flex-shrink-0"
+                            >
+                              {migratingMap[img._id] === 'loading' ? (
+                                <span className="flex items-center gap-1.5">
+                                  <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                  Migrating...
+                                </span>
+                              ) : migratingMap[img._id] === 'done' ? (
+                                <span className="flex items-center gap-1">✓ Migrated</span>
+                              ) : migratingMap[img._id] === 'error' ? (
+                                <span className="flex items-center gap-1">✕ Failed</span>
+                              ) : (
+                                <span className="flex items-center gap-1">↑ Migrate to Blob</span>
+                              )}
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Blob images — already good */}
+                  {images.filter((i) => i.url?.startsWith('https://')).length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-green-600 mb-3 flex items-center gap-2">
+                        <span>✓</span> Blob Images — already on Vercel Blob
+                      </h3>
+                      <div className="flex flex-wrap gap-2">
+                        {images.filter((i) => i.url?.startsWith('https://')).map((img) => (
+                          <div key={img._id} className="group relative w-16 h-16 rounded-lg overflow-hidden ring-1 ring-green-500/30">
+                            <img src={img.url} alt="" className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-green-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {images.length === 0 && (
+                    <p className="text-sm text-muted py-8 text-center">No images in gallery yet.</p>
+                  )}
+                </>
+              )}
+            </div>
+          </motion.div>
+        )}
+
         {/* === TAB: FOOTER === */}
         {tab === 'footer' && (
           <motion.div key="footer" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
@@ -850,6 +1015,7 @@ export default function DashboardPage() {
               {tab === 'heroTexts' && 'hero text fields'}
               {tab === 'heroImages' && `${orderedHero.length} images selected`}
               {tab === 'categories' && `${categoryList.length} categories`}
+              {tab === 'storage' && `${images?.length || 0} images`}
             </span>
             <Button
               onClick={handleSave}

@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { sanitize } from '@/lib/validate';
 import { rateLimit, getClientIp } from '@/lib/rateLimit';
+import { uploadToBlob, getSignedUrl } from '@/lib/blob';
 
 async function processWithSharp(image) {
   try {
@@ -58,7 +59,7 @@ export async function GET(_request) {
     const images = await collection.find({}).sort({ createdAt: -1 }).toArray();
     return NextResponse.json(images.map((doc) => ({
       ...doc,
-      url: typeof doc.url === 'string' ? doc.url : doc.url,
+      url: getSignedUrl(typeof doc.url === 'string' ? doc.url : ''),
       _id: doc._id.toString(),
       category: doc.category || 'others',
       featured: doc.featured === true,
@@ -108,11 +109,9 @@ export async function POST(request) {
 
       if (process.env.GALLERY_RW_TOKEN_READ_WRITE_TOKEN) {
         try {
-          const { put } = await import('@vercel/blob');
           const ext = image.match(/image\/(\w+)/)?.[1] || 'jpeg';
           const filename = `gallery/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-          const blob = await put(filename, buffer, { access: 'public' });
-          finalUrl = blob.url;
+          finalUrl = await uploadToBlob(filename, buffer);
         } catch (blobError) {
           console.error('Blob upload failed, falling back to base64 with Sharp:', blobError);
           finalUrl = await processWithSharp(image);

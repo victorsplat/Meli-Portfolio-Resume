@@ -14,6 +14,7 @@ function mapToGalleryItem(img, catLabel, lang) {
   const titleText = img.title?.[lang] || img.title?.en || 'Untitled';
   const descText = img.description?.[lang] || img.description?.en || '';
   return {
+    _id: img._id,
     common: titleText,
     binomial: catLabel,
     photo: {

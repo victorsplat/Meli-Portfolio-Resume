@@ -116,6 +116,29 @@ export function useUpdateSettings() {
   });
 }
 
+export function useMigrateImage() {
+  const queryClient = useQueryClient();
+  const getAuthHeaders = useAuthStore((s) => s.getAuthHeaders);
+
+  return useMutation({
+    mutationFn: async (imageId) => {
+      const res = await fetch('/api/gallery/migrate', {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: imageId }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Migration failed');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['gallery-images'] });
+    },
+  });
+}
+
 export function useSubmitContact() {
   return useMutation({
     mutationFn: async (form) => {

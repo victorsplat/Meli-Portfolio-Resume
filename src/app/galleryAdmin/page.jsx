@@ -340,7 +340,7 @@ export default function GalleryAdmin() {
                 {authError}
               </motion.p>
             )}
-            <button type="submit" className="btn w-full">Authenticate</button>
+            <Button type="submit" className="w-full">Authenticate</Button>
           </form>
           <div className="text-center mt-6">
             <Link href="/" className="text-sm text-accent hover:underline">{t('galleryAdmin.backToHome')}</Link>
@@ -360,18 +360,10 @@ export default function GalleryAdmin() {
               <p className="text-muted text-sm">Manage your gallery images</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Link href="/" className="btn !text-xs !py-2 !px-3 !bg-white/80 dark:!bg-white/10 !text-accent hover:!bg-white dark:hover:!bg-white/20 !shadow-none border border-panel-border">
-                🏠 {t('galleryAdmin.backToHome')}
-              </Link>
-              <Link href="/gallery" className="btn !text-xs !py-2 !px-3 !bg-white/80 dark:!bg-white/10 !text-accent hover:!bg-white dark:hover:!bg-white/20 !shadow-none border border-panel-border">
-                👁 {t('galleryAdmin.viewGallery')}
-              </Link>
-              <Link href="/galleryAdmin/dashboard" className="btn !text-xs !py-2 !px-3" style={{ background: 'linear-gradient(135deg, #FFE600, #FFC000)', color: '#111827' }}>
-                📊 Dashboard
-              </Link>
-              <button onClick={logout} className="btn !text-xs !py-2 !px-3 !bg-red-500 hover:!bg-red-600 !shadow-none">
-                🚪 Logout
-              </button>
+              <Link href="/" className="btn btn-sm">🏠 {t('galleryAdmin.backToHome')}</Link>
+              <Link href="/gallery" className="btn btn-sm">👁 {t('galleryAdmin.viewGallery')}</Link>
+              <Link href="/galleryAdmin/dashboard" className="btn btn-sm">📊 Dashboard</Link>
+              <Button variant="destructive" size="sm" onClick={logout}>🚪 Logout</Button>
               <LanguageSwitcher />
             </div>
           </div>

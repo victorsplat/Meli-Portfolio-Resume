@@ -128,7 +128,7 @@ export default function CircularGallery({ items, className, radius = 500, autoRo
 
           return (
             <div
-              key={item.photo?.url || i}
+              key={item._id || item.photo?.url || i}
               role="group"
               aria-label={item.common}
               className="absolute"
