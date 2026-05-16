@@ -3,6 +3,7 @@ import { useRef, useState, useEffect } from "react";
 import { useInView } from "framer-motion";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useI18n } from '@/lib/i18n';
+import { MeshGradientBackground } from '@/components/ui/mesh-gradient';
 
 const Skills = () => {
   const { t } = useI18n();
@@ -28,40 +29,47 @@ const Skills = () => {
   }, []);
 
   return (
-    <section className="section container" id="skills" ref={ref}>
-      <h2 className="title">{t('skills.title')}</h2>
+    <section className="section container relative overflow-hidden rounded-2xl p-8" id="skills" ref={ref}>
+      <MeshGradientBackground
+        className="absolute inset-0"
+        colors={["#585FD9", "#2D3277", "#FFE600", "#2563eb"]}
+        speed={0.5}
+      />
+      <div className="relative z-10">
+        <h2 className="title">{t('skills.title')}</h2>
 
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-8 mb-16">
-        <div className="bg-[var(--bg-hero)] p-6 rounded-[24px]">
-          <h3 className="mb-4">{t('skills.personal')}</h3>
-          <div style={{ position: 'relative', width: '100%', height: '200px' }}>
-            {mounted && (
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart layout="vertical" data={personalData}>
-                  <XAxis type="number" hide domain={[0, 100]} />
-                  <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 12, fill: 'var(--text-main)' }} />
-                  <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '8px', border: '1px solid var(--panel-border)', background: 'var(--bg-app)' }} />
-                  <Bar dataKey="value" fill="var(--accent)" radius={[0, 4, 4, 0]} isAnimationActive={isInView} animationDuration={800} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-8 mb-16">
+          <div className="bg-[var(--bg-hero)] p-6 rounded-[24px]">
+            <h3 className="mb-4">{t('skills.personal')}</h3>
+            <div style={{ position: 'relative', width: '100%', height: '200px' }}>
+              {mounted && (
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart layout="vertical" data={personalData}>
+                    <XAxis type="number" hide domain={[0, 100]} />
+                    <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 12, fill: 'var(--text-main)' }} />
+                    <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '8px', border: '1px solid var(--panel-border)', background: 'var(--bg-app)' }} />
+                    <Bar dataKey="value" fill="var(--accent)" radius={[0, 4, 4, 0]} isAnimationActive={isInView} animationDuration={800} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
           </div>
-        </div>
 
-        <div className="bg-[var(--bg-hero)] p-6 rounded-[24px]">
-          <h3 className="mb-4">{t('skills.overallTech')}</h3>
-          <div style={{ position: 'relative', width: '100%', height: '200px' }}>
-            {mounted && (
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={techData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--panel-border)" />
-                  <XAxis dataKey="name" tick={{ fontSize: 12, fill: 'var(--text-main)' }} />
-                  <YAxis domain={[0, 100]} hide />
-                  <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '8px', border: '1px solid var(--panel-border)', background: 'var(--bg-app)' }} />
-                  <Bar dataKey="value" fill="var(--accent)" radius={[4, 4, 0, 0]} isAnimationActive={isInView} animationDuration={800} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
+          <div className="bg-[var(--bg-hero)] p-6 rounded-[24px]">
+            <h3 className="mb-4">{t('skills.overallTech')}</h3>
+            <div style={{ position: 'relative', width: '100%', height: '200px' }}>
+              {mounted && (
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={techData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--panel-border)" />
+                    <XAxis dataKey="name" tick={{ fontSize: 12, fill: 'var(--text-main)' }} />
+                    <YAxis domain={[0, 100]} hide />
+                    <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '8px', border: '1px solid var(--panel-border)', background: 'var(--bg-app)' }} />
+                    <Bar dataKey="value" fill="var(--accent)" radius={[4, 4, 0, 0]} isAnimationActive={isInView} animationDuration={800} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
           </div>
         </div>
       </div>

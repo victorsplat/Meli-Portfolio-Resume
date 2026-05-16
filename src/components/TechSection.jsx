@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useI18n } from '@/lib/i18n';
+import { MeshGradientBackground } from '@/components/ui/mesh-gradient';
 import {
   TbBrandReact,
   TbBrandNextjs,
@@ -181,13 +182,19 @@ const TechSection = () => {
 
   return (
     <motion.section
-      className="section container"
+      className="section container relative overflow-hidden rounded-2xl p-8"
       id="tech-stack"
       variants={containerVariants}
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, amount: 0.1 }}
     >
+      <MeshGradientBackground
+        className="absolute inset-0"
+        colors={["#2D3277", "#585FD9", "#FFE600", "#7c3aed"]}
+        speed={0.5}
+      />
+      <div className="relative z-10">
       <h2 className="title">{t('tech.title')}</h2>
 
       <div className="relative flex flex-col md:flex-row mb-12">
@@ -230,6 +237,7 @@ const TechSection = () => {
           </div>
         </div>
       ))}
+        </div>
     </motion.section>
   );
 };
