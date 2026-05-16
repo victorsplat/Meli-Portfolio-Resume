@@ -10,6 +10,7 @@ import { useGalleryStore } from '@/lib/stores/galleryStore';
 import { useGalleryImages, useUploadImage, useDeleteImage, useUpdateImage, useGallerySettings } from '@/hooks/useGallery';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 const MAX_FILES = 20;
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
@@ -17,7 +18,7 @@ const MAX_DIM = 2000;
 const JPEG_QUALITY = 0.85;
 
 export default function GalleryAdmin() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   usePageTitle('galleryAdmin.title');
 
   const { token, login, logout } = useAuthStore();
@@ -358,7 +359,8 @@ export default function GalleryAdmin() {
               <h1 className="title text-3xl md:text-4xl mb-1">{t('galleryAdmin.title')}</h1>
               <p className="text-muted text-sm">Manage your gallery images</p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <LanguageSwitcher />
               <Link href="/" className="btn !text-xs !py-2 !px-3 !bg-white/80 dark:!bg-white/10 !text-accent hover:!bg-white dark:hover:!bg-white/20 !shadow-none border border-panel-border">
                 🏠 {t('galleryAdmin.backToHome')}
               </Link>

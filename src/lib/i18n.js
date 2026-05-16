@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 const I18nContext = createContext(null);
 
@@ -762,6 +762,14 @@ const translations = {
 
 export function I18nProvider({ children }) {
   const [lang, setLang] = useState('en');
+  useEffect(() => {
+    const saved = localStorage.getItem('meli_lang');
+    if (saved && ['en', 'es', 'pt'].includes(saved)) setLang(saved);
+  }, []);
+  const setLangPersist = useCallback((code) => {
+    setLang(code);
+    localStorage.setItem('meli_lang', code);
+  }, []);
   const t = useCallback((path, params) => {
     const keys = path.split('.');
     let value = translations[lang];
@@ -776,7 +784,7 @@ export function I18nProvider({ children }) {
   }, [lang]);
 
   return (
-    <I18nContext.Provider value={{ lang, setLang, t, translations: translations[lang] }}>
+    <I18nContext.Provider value={{ lang, setLang: setLangPersist, t, translations: translations[lang] }}>
       {children}
     </I18nContext.Provider>
   );

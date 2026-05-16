@@ -7,6 +7,7 @@ import { useI18n } from '@/lib/i18n';
 import { usePageTitle } from '@/lib/usePageTitle';
 import { useGalleryImages, useGallerySettings } from '@/hooks/useGallery';
 import ScrollExpandMedia from '@/components/ui/scroll-expansion-hero';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 export default function GalleryPage() {
   const { t, lang } = useI18n();
@@ -69,6 +70,9 @@ export default function GalleryPage() {
 
   return (
     <div className="min-h-screen bg-bg-app">
+      <div className="absolute top-4 right-4 z-30">
+        <LanguageSwitcher />
+      </div>
       <ScrollExpandMedia
         mediaType="image"
         mediaSrc={mediaImage.url}
