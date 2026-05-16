@@ -67,7 +67,7 @@ const Hero = ({ isMobile }) => {
 
   return (
     <header
-      className="relative overflow-hidden bg-[var(--bg-hero)] text-[var(--text-main)] p-10 px-12 max-md:p-8 max-md:px-4 text-left rounded-xl mb-8 shadow-[0_10px_30px_rgba(0,0,0,0.2)] [perspective:1000px] z-1 transition-[background,color] duration-300"
+      className="relative overflow-hidden bg-[var(--bg-hero)] text-[var(--text-main)] p-10 px-12 max-md:p-8 max-md:px-4 text-left rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.2)] [perspective:1000px] z-1 transition-[background,color] duration-300"
       onMouseMove={handleMouse}
       onMouseLeave={() => { x.set(0); y.set(0); }}
     >

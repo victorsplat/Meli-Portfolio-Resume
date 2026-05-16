@@ -84,6 +84,7 @@ const translations = {
       backend: 'Back-end',
       frontend: 'Front-end',
       devops: 'DevOps',
+      chartValue: 'Value',
     },
     projects: {
       title: 'Projects',
@@ -346,6 +347,7 @@ const translations = {
       backend: 'Back-end',
       frontend: 'Front-end',
       devops: 'DevOps',
+      chartValue: 'Valor',
     },
     projects: {
       title: 'Proyectos',
@@ -608,6 +610,7 @@ const translations = {
       backend: 'Back-end',
       frontend: 'Front-end',
       devops: 'DevOps',
+      chartValue: 'Valor',
     },
     projects: {
       title: 'Projetos',

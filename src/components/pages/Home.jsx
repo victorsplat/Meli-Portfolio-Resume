@@ -68,8 +68,11 @@ function Home() {
           <div className="container">
             <About onHover={setIsAboutHovered} />
             <TechSection />
+            <div className="h-16" />
             <Skills />
+            <div className="h-16" />
             <Projects />
+            <div className="h-16" />
             <Contact />
           </div>
 

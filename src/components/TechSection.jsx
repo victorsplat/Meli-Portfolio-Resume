@@ -160,16 +160,16 @@ const TechSection = () => {
           whileTap={{ scale: 0.95 }}
           transition={{ duration: 0.6, type: "spring", stiffness: 260, damping: 20 }}
         >
-          <div className="absolute inset-0 backface-hidden rounded-[24px] flex flex-col items-center justify-center gap-4 bg-[var(--bg-hero)] border border-panel-border backdrop-blur-md">
+          <div className="absolute inset-0 backface-hidden rounded-[24px] flex flex-col items-center justify-center gap-4 bg-white/15 dark:bg-[var(--bg-hero)] border border-white/10 dark:border-panel-border backdrop-blur-md">
             <div className="text-4xl flex items-center justify-center [filter:drop-shadow(0_0_8px_rgba(0,0,0,0.1))]" style={{ color: item.color }}>
               {item.icon}
             </div>
-            <span className="font-quantico text-sm font-semibold text-text-main">{item.name}</span>
+            <span className="font-quantico text-sm font-semibold text-white">{item.name}</span>
           </div>
 
-          <div className="absolute inset-0 backface-hidden [transform:rotateY(180deg)] p-4 text-center border-2 rounded-[24px] flex flex-col items-center justify-center gap-4 bg-[var(--bg-hero)] backdrop-blur-md" style={{ borderColor: item.color }}>
-            <p className="text-xs leading-tight text-text-main">{t('tech.items.' + item.name)}</p>
-            <span className="text-[0.7rem] font-extrabold opacity-50 mt-auto">{item.name}</span>
+          <div className="absolute inset-0 backface-hidden [transform:rotateY(180deg)] p-4 text-center border-2 rounded-[24px] flex flex-col items-center justify-center gap-4 bg-white/15 dark:bg-[var(--bg-hero)] backdrop-blur-md" style={{ borderColor: item.color }}>
+            <p className="text-xs leading-tight text-white">{t('tech.items.' + item.name)}</p>
+            <span className="text-[0.7rem] font-extrabold opacity-50 mt-auto text-white">{item.name}</span>
           </div>
         </motion.div>
       </motion.div>
@@ -182,7 +182,7 @@ const TechSection = () => {
 
   return (
     <motion.section
-      className="section container relative overflow-hidden rounded-2xl p-8"
+      className="section container relative overflow-hidden rounded-2xl px-14 py-10 shadow-xl shadow-black/10 dark:shadow-black/30"
       id="tech-stack"
       variants={containerVariants}
       initial="hidden"
@@ -194,19 +194,19 @@ const TechSection = () => {
         colors={["#2D3277", "#585FD9", "#FFE600", "#7c3aed"]}
         speed={0.5}
       />
-      <div className="relative z-10">
-      <h2 className="title">{t('tech.title')}</h2>
+      <div className="relative z-10 text-white">
+      <h2 className="title text-white">{t('tech.title')}</h2>
 
       <div className="relative flex flex-col md:flex-row mb-12">
         <div className="flex-1 min-w-0 md:pr-8">
-          <h3 className="text-lg font-bold uppercase tracking-widest text-accent mb-6 opacity-80">{t('tech.frontend')}</h3>
+          <h3 className="text-lg font-bold uppercase tracking-widest text-white mb-6 opacity-80">{t('tech.frontend')}</h3>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-6 max-md:grid-cols-3 max-md:gap-4 max-sm:grid-cols-2">
             {fullWidthGroups[0].items.map((item, i) => renderItem(item, i, 'full-0'))}
           </div>
         </div>
         <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-accent to-transparent opacity-40 -translate-x-1/2" />
         <div className="flex-1 min-w-0 md:pl-8 mt-8 md:mt-0">
-          <h3 className="text-lg font-bold uppercase tracking-widest text-accent mb-6 opacity-80">{t('tech.backend')}</h3>
+          <h3 className="text-lg font-bold uppercase tracking-widest text-white mb-6 opacity-80">{t('tech.backend')}</h3>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-6 max-md:grid-cols-3 max-md:gap-4 max-sm:grid-cols-2">
             {fullWidthGroups[1].items.map((item, i) => renderItem(item, i, 'full-1'))}
           </div>
@@ -215,14 +215,14 @@ const TechSection = () => {
 
       <div className="relative flex flex-col md:flex-row mb-12">
         <div className="flex-1 min-w-0 md:pr-8">
-          <h3 className="text-lg font-bold uppercase tracking-widest text-accent mb-6 opacity-80">{t('tech.tools')}</h3>
+          <h3 className="text-lg font-bold uppercase tracking-widest text-white mb-6 opacity-80">{t('tech.tools')}</h3>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(110px,1fr))] gap-3">
             {splitGroups[0].items.map((item, i) => renderItem(item, i, 'split-0'))}
           </div>
         </div>
         <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-accent to-transparent opacity-40 -translate-x-1/2" />
         <div className="flex-1 min-w-0 md:pl-8 mt-8 md:mt-0">
-          <h3 className="text-lg font-bold uppercase tracking-widest text-accent mb-6 opacity-80">{t('tech.creative')}</h3>
+          <h3 className="text-lg font-bold uppercase tracking-widest text-white mb-6 opacity-80">{t('tech.creative')}</h3>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(110px,1fr))] gap-3">
             {splitGroups[1].items.map((item, i) => renderItem(item, i, 'split-1'))}
           </div>
@@ -231,13 +231,13 @@ const TechSection = () => {
 
       {toolingGroups.map((group, idx) => (
         <div key={idx} className="mb-6">
-          <h3 className="text-lg font-bold uppercase tracking-widest text-accent mb-6 opacity-80 text-center">{t('tech.devTooling')}</h3>
+          <h3 className="text-lg font-bold uppercase tracking-widest text-white mb-6 opacity-80 text-center">{t('tech.devTooling')}</h3>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-4 max-md:grid-cols-3 max-md:gap-3 max-sm:grid-cols-2">
             {group.items.map((item, i) => renderItem(item, i, 'tooling-' + idx))}
           </div>
         </div>
       ))}
-        </div>
+      </div>
     </motion.section>
   );
 };
