@@ -1,33 +1,19 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useI18n } from '@/lib/i18n';
 import { usePageTitle } from '@/lib/usePageTitle';
+import { useGalleryImages, useGallerySettings } from '@/hooks/useGallery';
 import CircularGallery from '@/components/ui/circular-gallery';
 import GalleryFooter from '@/components/GalleryFooter';
+import { Button } from '@/components/ui/button';
+import { X, ArrowLeft } from 'lucide-react';
 
-const categoryMeta = {
-  design: { emoji: '🎨', en: 'Design', es: 'Diseño', pt: 'Design' },
-  aboutMe: { emoji: '👤', en: 'About Me', es: 'Sobre Mí', pt: 'Sobre Mim' },
-  skate: { emoji: '🛹', en: 'Skate', es: 'Skate', pt: 'Skate' },
-  drinks: { emoji: '🍹', en: 'Drinks', es: 'Bebidas', pt: 'Bebidas' },
-  food: { emoji: '🍕', en: 'Food', es: 'Comida', pt: 'Comida' },
-  others: { emoji: '✨', en: 'Others', es: 'Otros', pt: 'Outros' },
-};
-
-function getCategoryLabel(cat, lang) {
-  const meta = categoryMeta[cat];
-  if (!meta) return cat;
-  return meta[lang] || meta.en;
-}
-
-function mapToGalleryItem(img, lang) {
+function mapToGalleryItem(img, catLabel) {
   return {
     common: img.title || 'Untitled',
-    binomial: getCategoryLabel(img.category, lang),
+    binomial: catLabel,
     photo: {
       url: img.url,
       text: img.description || '',
@@ -41,44 +27,52 @@ export default function ExplorePage() {
   const { t, lang } = useI18n();
   usePageTitle('gallery.explore');
   const [activeCategory, setActiveCategory] = useState('all');
-  const [radius, setRadius] = useState(600);
+  const [radius, setRadius] = useState(500);
+  const [showFooter, setShowFooter] = useState(false);
+
+  const { data: images = [], isLoading } = useGalleryImages();
+  const { data: settings } = useGallerySettings();
+
+  const categories = useMemo(() => {
+    return settings?.categories?.items || [];
+  }, [settings]);
 
   useEffect(() => {
-    window.scrollTo(0, 0);
-    setRadius(Math.min(600, window.innerWidth * 0.4));
+    setRadius(Math.min(500, window.innerWidth * 0.35));
   }, []);
 
   useEffect(() => {
     function handleResize() {
-      setRadius(Math.min(600, window.innerWidth * 0.4));
+      setRadius(Math.min(500, window.innerWidth * 0.35));
     }
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const { data: images = [], isLoading } = useQuery({
-    queryKey: ['gallery-images'],
-    queryFn: async () => {
-      const res = await axios.get('/api/gallery');
-      return res.data;
-    },
-    staleTime: 60000,
-  });
+  function getCategoryLabel(catId) {
+    const cat = categories.find((c) => c.id === catId);
+    if (!cat) return catId;
+    return cat.name?.[lang] || cat.name?.en || catId;
+  }
 
-  const categories = useMemo(() => {
-    return [...new Set(images.map(img => img.category))].sort();
+  function getCategoryEmoji(catId) {
+    const cat = categories.find((c) => c.id === catId);
+    return cat?.emoji || '📁';
+  }
+
+  const availableCategories = useMemo(() => {
+    return [...new Set(images.map((img) => img.category))].sort();
   }, [images]);
 
   const galleryItems = useMemo(() => {
     const filtered = activeCategory === 'all'
       ? images
-      : images.filter(img => img.category === activeCategory);
-    return filtered.map(img => mapToGalleryItem(img, lang));
-  }, [images, activeCategory, lang]);
+      : images.filter((img) => img.category === activeCategory);
+    return filtered.map((img) => mapToGalleryItem(img, getCategoryLabel(img.category)));
+  }, [images, activeCategory, lang, categories]);
 
   return (
-    <div className="min-h-screen bg-bg-app">
-      {/* Loading Overlay */}
+    <div className="h-screen bg-bg-app overflow-hidden">
       <AnimatePresence>
         {isLoading && (
           <motion.div
@@ -93,50 +87,50 @@ export default function ExplorePage() {
         )}
       </AnimatePresence>
 
-      {/* Empty State */}
       {!isLoading && images.length === 0 && (
-        <div className="flex flex-col items-center justify-center min-h-screen text-center px-4">
+        <div className="flex flex-col items-center justify-center h-screen text-center px-4">
           <div className="text-6xl mb-6">🖼️</div>
           <p className="text-muted text-lg">{t('gallery.noImages')}</p>
           <p className="text-sm text-muted mt-2">{t('gallery.addImages')}</p>
         </div>
       )}
 
-      {/* Gallery 3D + Categories */}
       {!isLoading && images.length > 0 && (
-        <div style={{ height: '500vh' }}>
-          <div className="w-full h-screen sticky top-0 flex flex-col items-center justify-center overflow-hidden">
-            {/* Sticky Category Header */}
-            <div className="absolute top-4 md:top-8 left-1/2 -translate-x-1/2 z-20 w-full px-4">
-              <div className="flex flex-wrap justify-center gap-2 max-w-3xl mx-auto">
-                <button
-                  onClick={() => setActiveCategory('all')}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-                    activeCategory === 'all'
-                      ? 'bg-[#FFE600] text-[#111827] shadow-lg shadow-[#FFE600]/20'
-                      : 'bg-white/50 dark:bg-white/5 text-muted hover:bg-white/80 dark:hover:bg-white/10 border border-panel-border backdrop-blur-sm'
-                  }`}
+        <>
+          {/* Category pills - fixed at top */}
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 w-full px-4 pointer-events-none">
+            <div className="flex flex-wrap justify-center gap-1.5 max-w-3xl mx-auto pointer-events-auto">
+              <Button
+                variant={activeCategory === 'all' ? 'default' : 'ghost'}
+                size="xs"
+                onClick={() => setActiveCategory('all')}
+                className={activeCategory === 'all'
+                  ? 'bg-[#FFE600] text-[#111827] hover:bg-[#FFE600]/90 shadow-lg shadow-[#FFE600]/20'
+                  : 'bg-white/60 dark:bg-white/10 text-muted hover:text-foreground backdrop-blur-md border border-border/50'
+                }
+              >
+                {t('gallery.allCategories')}
+              </Button>
+              {availableCategories.map((cat) => (
+                <Button
+                  key={cat}
+                  variant={activeCategory === cat ? 'default' : 'ghost'}
+                  size="xs"
+                  onClick={() => setActiveCategory(cat)}
+                  className={activeCategory === cat
+                    ? 'bg-[#FFE600] text-[#111827] hover:bg-[#FFE600]/90 shadow-lg shadow-[#FFE600]/20'
+                    : 'bg-white/60 dark:bg-white/10 text-muted hover:text-foreground backdrop-blur-md border border-border/50'
+                  }
                 >
-                  {t('gallery.allCategories')}
-                </button>
-                {categories.map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => setActiveCategory(cat)}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 flex items-center gap-1.5 ${
-                      activeCategory === cat
-                        ? 'bg-[#FFE600] text-[#111827] shadow-lg shadow-[#FFE600]/20'
-                        : 'bg-white/50 dark:bg-white/5 text-muted hover:bg-white/80 dark:hover:bg-white/10 border border-panel-border backdrop-blur-sm'
-                    }`}
-                  >
-                    <span>{categoryMeta[cat]?.emoji}</span>
-                    <span>{getCategoryLabel(cat, lang)}</span>
-                  </button>
-                ))}
-              </div>
+                  <span className="mr-1">{getCategoryEmoji(cat)}</span>
+                  <span>{getCategoryLabel(cat)}</span>
+                </Button>
+              ))}
             </div>
+          </div>
 
-            {/* Circular Gallery */}
+          {/* Carousel */}
+          <div className="relative w-full h-screen flex items-center justify-center overflow-hidden">
             <motion.div
               key={activeCategory}
               initial={{ opacity: 0 }}
@@ -146,12 +140,61 @@ export default function ExplorePage() {
             >
               <CircularGallery items={galleryItems} radius={radius} />
             </motion.div>
-          </div>
-        </div>
-      )}
 
-      {/* Footer */}
-      {!isLoading && images.length > 0 && <GalleryFooter t={t} />}
+            {/* Footer toggle button */}
+            <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20">
+              {!showFooter && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                >
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowFooter(true)}
+                    className="bg-white/60 dark:bg-white/10 backdrop-blur-md border border-border/50 text-muted hover:text-foreground shadow-sm"
+                  >
+                    {t('gallery.footerDesc')}
+                    <span className="ml-1 opacity-60">↓</span>
+                  </Button>
+                </motion.div>
+              )}
+            </div>
+          </div>
+
+          {/* Footer overlay */}
+          <AnimatePresence>
+            {showFooter && (
+              <motion.div
+                initial={{ y: '100%' }}
+                animate={{ y: 0 }}
+                exit={{ y: '100%' }}
+                transition={{ type: 'spring', damping: 28, stiffness: 220 }}
+                className="fixed inset-0 z-40 overflow-y-auto"
+              >
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowFooter(false)} />
+                <div className="relative z-10 min-h-screen flex items-end">
+                  <div className="w-full relative" onClick={(e) => e.stopPropagation()}>
+                    {/* Return button */}
+                    <div className="absolute -top-14 left-1/2 -translate-x-1/2 z-50">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setShowFooter(false)}
+                        className="bg-white/80 dark:bg-white/20 backdrop-blur-md border border-border/50 shadow-lg rounded-full w-12 h-12 hover:bg-white dark:hover:bg-white/30"
+                      >
+                        <ArrowLeft className="w-5 h-5" />
+                      </Button>
+                    </div>
+                    <GalleryFooter t={t} onClose={() => setShowFooter(false)} />
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </>
+      )}
     </div>
   );
 }

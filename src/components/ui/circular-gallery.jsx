@@ -1,59 +1,91 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { cn } from '@/lib/utils';
 
-function cn(...classes) {
-  return classes.filter(Boolean).join(' ');
-}
-
-export default function CircularGallery({ items, className, radius = 600, autoRotateSpeed = 0.02 }) {
+export default function CircularGallery({ items, className, radius = 500, autoRotateSpeed = 0.01 }) {
   const [rotation, setRotation] = useState(0);
-  const [isScrolling, setIsScrolling] = useState(false);
-  const scrollTimeoutRef = useRef(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isIdle, setIsIdle] = useState(true);
+  const idleTimeoutRef = useRef(null);
   const animationFrameRef = useRef(null);
+  const touchStartXRef = useRef(null);
+  const wheelAccumRef = useRef(0);
+  const anglePerItemRef = useRef(0);
 
-  useEffect(() => {
-    function handleScroll() {
-      setIsScrolling(true);
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
+  const step = useCallback((dir) => {
+    setIsIdle(false);
+    if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
+    const angle = anglePerItemRef.current * dir;
+    setRotation(prev => prev - angle);
+    setCurrentIndex(prev => prev + dir);
+    idleTimeoutRef.current = setTimeout(() => setIsIdle(true), 2000);
+  }, []);
 
-      const scrollableHeight = document.documentElement.scrollHeight - window.innerHeight;
-      const scrollProgress = scrollableHeight > 0 ? window.scrollY / scrollableHeight : 0;
-      const scrollRotation = scrollProgress * 360;
-      setRotation(scrollRotation);
-
-      scrollTimeoutRef.current = setTimeout(() => {
-        setIsScrolling(false);
-      }, 150);
+  const handleWheel = useCallback((e) => {
+    e.preventDefault();
+    wheelAccumRef.current += e.deltaY;
+    if (Math.abs(wheelAccumRef.current) >= 80) {
+      step(wheelAccumRef.current > 0 ? 1 : -1);
+      wheelAccumRef.current = 0;
     }
+  }, [step]);
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-    };
+  const handleTouchStart = useCallback((e) => {
+    touchStartXRef.current = e.touches[0].clientX;
+  }, []);
+
+  const handleTouchMove = useCallback((e) => {
+    if (touchStartXRef.current === null) return;
+    e.preventDefault();
+    const deltaX = e.touches[0].clientX - touchStartXRef.current;
+    if (Math.abs(deltaX) >= 60) {
+      step(deltaX < 0 ? 1 : -1);
+      touchStartXRef.current = e.touches[0].clientX;
+    }
+  }, [step]);
+
+  const handleTouchEnd = useCallback(() => {
+    touchStartXRef.current = null;
   }, []);
 
   useEffect(() => {
+    const el = document.getElementById('circular-gallery-container');
+    if (!el) return;
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    el.addEventListener('touchstart', handleTouchStart, { passive: true });
+    el.addEventListener('touchmove', handleTouchMove, { passive: false });
+    el.addEventListener('touchend', handleTouchEnd, { passive: true });
+    return () => {
+      el.removeEventListener('wheel', handleWheel);
+      el.removeEventListener('touchstart', handleTouchStart);
+      el.removeEventListener('touchmove', handleTouchMove);
+      el.removeEventListener('touchend', handleTouchEnd);
+      if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
+    };
+  }, [handleWheel, handleTouchStart, handleTouchMove, handleTouchEnd]);
+
+  useEffect(() => {
+    let lastAutoStep = 0;
     function autoRotate() {
-      if (!isScrolling) {
-        setRotation(prev => prev + autoRotateSpeed);
+      if (isIdle) {
+        lastAutoStep += autoRotateSpeed;
+        if (lastAutoStep >= 1) {
+          const angle = anglePerItemRef.current;
+          setRotation(prev => prev - angle);
+          setCurrentIndex(prev => prev + 1);
+          lastAutoStep = 0;
+        }
+      } else {
+        lastAutoStep = 0;
       }
       animationFrameRef.current = requestAnimationFrame(autoRotate);
     }
-
     animationFrameRef.current = requestAnimationFrame(autoRotate);
-
     return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     };
-  }, [isScrolling, autoRotateSpeed]);
+  }, [isIdle, autoRotateSpeed]);
 
   if (!items || items.length === 0) {
     return (
@@ -63,56 +95,65 @@ export default function CircularGallery({ items, className, radius = 600, autoRo
     );
   }
 
-  const anglePerItem = 360 / items.length;
+  const count = items.length;
+  const anglePerItem = 360 / count;
+  anglePerItemRef.current = anglePerItem;
+
+  const cardW = 200;
+  const cardH = 280;
 
   return (
     <div
+      id="circular-gallery-container"
       role="region"
       aria-label="Circular 3D Gallery"
-      className={cn("relative w-full h-full flex items-center justify-center", className)}
-      style={{ perspective: '2000px' }}
+      className={cn("relative w-full h-full flex items-center justify-center overflow-hidden touch-none", className)}
+      style={{ perspective: '1200px' }}
     >
       <div
-        className="relative w-full h-full"
+        className="relative w-full h-full flex items-center justify-center"
         style={{
-          transform: `rotateY(${rotation}deg)`,
           transformStyle: 'preserve-3d',
+          transform: `rotateY(${rotation}deg)`,
+          transition: 'transform 0.8s cubic-bezier(0.22, 1, 0.36, 1)',
         }}
       >
         {items.map((item, i) => {
           const itemAngle = i * anglePerItem;
           const totalRotation = rotation % 360;
-          const relativeAngle = (itemAngle + totalRotation + 360) % 360;
+          const relativeAngle = ((itemAngle + totalRotation) % 360 + 360) % 360;
           const normalizedAngle = Math.abs(relativeAngle > 180 ? 360 - relativeAngle : relativeAngle);
-          const opacity = Math.max(0.3, 1 - (normalizedAngle / 180));
+          const opacity = Math.max(0.2, 1 - (normalizedAngle / 180));
+          const scale = 1 - normalizedAngle / 360 * 0.2;
 
           return (
             <div
               key={item.photo?.url || i}
               role="group"
               aria-label={item.common}
-              className="absolute w-[300px] h-[400px]"
+              className="absolute"
               style={{
-                transform: `rotateY(${itemAngle}deg) translateZ(${radius}px)`,
+                transform: `rotateY(${itemAngle}deg) translateZ(${radius}px) scale(${scale})`,
+                width: cardW,
+                height: cardH,
                 left: '50%',
                 top: '50%',
-                marginLeft: '-150px',
-                marginTop: '-200px',
+                marginLeft: -(cardW / 2),
+                marginTop: -(cardH / 2),
                 opacity: opacity,
-                transition: 'opacity 0.3s linear'
+                transition: 'opacity 0.5s ease, transform 0.8s cubic-bezier(0.22,1,0.36,1)',
               }}
             >
-              <div className="relative w-full h-full rounded-lg shadow-2xl overflow-hidden group border border-border bg-card/70 dark:bg-card/30 backdrop-blur-lg">
+              <div className="relative w-full h-full rounded-xl shadow-2xl overflow-hidden border border-border/50 bg-card/70 dark:bg-card/30 backdrop-blur-lg">
                 <img
                   src={item.photo.url}
                   alt={item.photo.text || ''}
                   className="absolute inset-0 w-full h-full object-cover"
                   style={{ objectPosition: item.photo.pos || 'center' }}
                 />
-                <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/80 to-transparent text-white">
-                  <h2 className="text-xl font-bold">{item.common}</h2>
-                  <em className="text-sm italic opacity-80">{item.binomial}</em>
-                  <p className="text-xs mt-2 opacity-70">Photo by: {item.photo.by}</p>
+                <div className="absolute bottom-0 left-0 w-full p-3 bg-gradient-to-t from-black/80 to-transparent text-white">
+                  <h3 className="text-sm font-semibold leading-tight">{item.common}</h3>
+                  <em className="text-[10px] italic opacity-80">{item.binomial}</em>
                 </div>
               </div>
             </div>

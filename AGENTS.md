@@ -114,3 +114,19 @@ GALLERY_RW_TOKEN_READ_WRITE_TOKEN=vercel_blob_rw_pnsJoE0Xley6PaKk_xgk0jAOnsyYk3p
 - **Sharp removed from imports but kept in dependencies** as fallback for base64 storage path.
 - **`@vercel/blob` v2.3.3** added to dependencies.
 - **Lint clean**: Removed unused `useCallback` import from admin page.
+
+### May 16 — Dynamic Categories + Zustand + Zod + TanStack Query Refactor
+- **New libs**: `zustand` and `zod` installed. `@tanstack/react-query` and `axios` were already present.
+- **`src/lib/schemas/gallery.js`** — Zod schemas for gallery images, settings, categories, and contact form. `DEFAULT_CATEGORIES` exported as fallback.
+- **`src/lib/stores/authStore.js`** — Zustand auth with `persist` middleware (same `gallery_admin_token` localStorage key). Centralizes login/logout/getAuthHeaders across admin pages. Eliminates duplicated auth logic.
+- **`src/lib/stores/galleryStore.js`** — Zustand store for gallery UI state (selected image, upload files/progress).
+- **`src/hooks/useGallery.js`** — TanStack Query hooks: `useGalleryImages`, `useGallerySettings`, `useUploadImage`, `useDeleteImage`, `useUpdateSettings`, `useSubmitContact`. All mutations auto-invalidate relevant queries on success.
+- **Dynamic categories**: Categories moved from hardcoded arrays + i18n keys to `settings.categories.items` in MongoDB. Managed via dashboard CRUD (add/edit/delete/reorder with emoji + i18n names). No code changes or page reloads needed to add new categories.
+- **`api/gallery/settings/route.js`** — `DEFAULT_SETTINGS` now includes `categories.items` with 6 default categories. `sanitizeSettings` handles category sanitization.
+- **`api/gallery/route.js`** — POST validation now reads valid categories from settings instead of hardcoded array. Removed duplicate `getClient()` call.
+- **`galleryAdmin/dashboard/page.jsx`** — Rewritten to use Zustand auth + TanStack hooks. New Categories section with add/edit/delete/reorder. Each category: slug, emoji, name in EN/ES/PT.
+- **`galleryAdmin/page.jsx`** — Refactored to use `useAuthStore`, `useGalleryImages`, `useGallerySettings`, `useUploadImage`, `useDeleteImage`. Category dropdown loads from settings dynamically. Image cards show category name via `getCategoryName()`.
+- **`gallery/explore/page.jsx`** — Refactored to use `useGalleryImages` + `useGallerySettings`. Category filters read from settings (emoji + name per language) instead of hardcoded `categoryMeta`.
+- **`gallery/page.jsx`** — Refactored to use `useGalleryImages` + `useGallerySettings`. Hero title/subtitle come from settings with i18n fallback.
+- **`i18n.js`** — Removed all `categoryDesign`/`categoryAboutMe`/`categorySkate`/`categoryDrinks`/`categoryFood`/`categoryOthers` translation keys from all 3 languages (now supplied by settings categories).
+- **Backwards compatibility**: `gallerySettingsSchema.categories` is optional (defaults to `{ items: [] }`), so old settings docs without categories won't crash. `useGallerySettings` fallbacks to raw data if Zod parse fails.

@@ -61,7 +61,10 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Image data or URL is required' }, { status: 400 });
     }
 
-    const validCategories = ['design', 'aboutMe', 'skate', 'drinks', 'food', 'others'];
+    const client = await getClient();
+    const db = client.db('gallery');
+    const settingsDoc = await db.collection('settings').findOne({ _id: 'main' });
+    const validCategories = settingsDoc?.data?.categories?.items?.map(c => c.id) || ['design', 'aboutMe', 'skate', 'drinks', 'food', 'others'];
     const safeCategory = validCategories.includes(category) ? category : 'others';
     let finalUrl = url || '';
 
@@ -88,8 +91,6 @@ export async function POST(request) {
       }
     }
 
-    const client = await getClient();
-    const db = client.db('gallery');
     const collection = db.collection('images');
 
     const result = await collection.insertOne({

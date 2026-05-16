@@ -7,11 +7,23 @@ import { rateLimit, getClientIp } from '@/lib/rateLimit';
 const TEXT_FIELDS = ['title', 'subtitle', 'text'];
 const ARRAY_FIELDS = ['imageIds'];
 
+const DEFAULT_CATEGORIES = [
+  { id: 'design', name: { en: 'Design', es: 'Diseño', pt: 'Design' }, emoji: '🎨', sortOrder: 0 },
+  { id: 'aboutMe', name: { en: 'About Me', es: 'Sobre Mí', pt: 'Sobre Mim' }, emoji: '👤', sortOrder: 1 },
+  { id: 'skate', name: { en: 'Skate', es: 'Skate', pt: 'Skate' }, emoji: '🛹', sortOrder: 2 },
+  { id: 'drinks', name: { en: 'Drinks', es: 'Bebidas', pt: 'Bebidas' }, emoji: '🍹', sortOrder: 3 },
+  { id: 'food', name: { en: 'Food', es: 'Comida', pt: 'Comida' }, emoji: '🍕', sortOrder: 4 },
+  { id: 'others', name: { en: 'Others', es: 'Otros', pt: 'Outros' }, emoji: '✨', sortOrder: 5 },
+];
+
 const DEFAULT_SETTINGS = {
   hero: {
     title: { en: '', es: '', pt: '' },
     subtitle: { en: '', es: '', pt: '' },
     imageIds: [],
+  },
+  categories: {
+    items: DEFAULT_CATEGORIES,
   },
   aboutMe: {
     title: { en: '', es: '', pt: '' },
@@ -24,8 +36,24 @@ const DEFAULT_SETTINGS = {
   },
 };
 
+function sanitizeCategory(cat) {
+  if (!cat || typeof cat !== 'object') return null;
+  const id = sanitize(String(cat.id || '').trim());
+  if (!id) return null;
+  return {
+    id,
+    name: {
+      en: sanitize(String(cat.name?.en || cat.name || '')),
+      es: sanitize(String(cat.name?.es || '')),
+      pt: sanitize(String(cat.name?.pt || '')),
+    },
+    emoji: sanitize(String(cat.emoji || '📁')),
+    sortOrder: typeof cat.sortOrder === 'number' ? Math.max(0, cat.sortOrder) : 0,
+  };
+}
+
 function sanitizeSettings(body) {
-  const settings = { hero: {}, aboutMe: {}, footer: {} };
+  const settings = { hero: {}, categories: { items: [] }, aboutMe: {}, footer: {} };
 
   for (const section of ['hero', 'aboutMe', 'footer']) {
     const src = body[section] || {};
@@ -43,6 +71,12 @@ function sanitizeSettings(body) {
         settings[section][field] = arr;
       }
     }
+  }
+
+  if (Array.isArray(body.categories?.items)) {
+    settings.categories.items = body.categories.items
+      .map(sanitizeCategory)
+      .filter(Boolean);
   }
 
   return settings;

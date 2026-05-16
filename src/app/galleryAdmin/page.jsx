@@ -5,67 +5,60 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
 import { usePageTitle } from '@/lib/usePageTitle';
+import { useAuthStore } from '@/lib/stores/authStore';
+import { useGalleryStore } from '@/lib/stores/galleryStore';
+import { useGalleryImages, useUploadImage, useDeleteImage, useGallerySettings } from '@/hooks/useGallery';
 import GalleryLightbox from '@/components/GalleryLightbox';
 
-const AUTH_KEY = 'gallery_admin_token';
 const MAX_FILES = 20;
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
 const MAX_DIM = 2000;
 const JPEG_QUALITY = 0.85;
 
-const categories = [
-  { value: 'design', labelKey: 'galleryAdmin.categoryDesign' },
-  { value: 'aboutMe', labelKey: 'galleryAdmin.categoryAboutMe' },
-  { value: 'skate', labelKey: 'galleryAdmin.categorySkate' },
-  { value: 'drinks', labelKey: 'galleryAdmin.categoryDrinks' },
-  { value: 'food', labelKey: 'galleryAdmin.categoryFood' },
-  { value: 'others', labelKey: 'galleryAdmin.categoryOthers' },
-];
-
 export default function GalleryAdmin() {
   const { t } = useI18n();
   usePageTitle('galleryAdmin.title');
-  const [authenticated, setAuthenticated] = useState(false);
-  const [authChecking, setAuthChecking] = useState(true);
+
+  const { token, login, logout } = useAuthStore();
+  const [ready, setReady] = useState(false);
+  useEffect(() => { setReady(true); }, []);
+  const isAuthed = ready && !!token;
+  const { selectedImage, setSelectedImage } = useGalleryStore();
+
+  const { data: images = [], isLoading, refetch } = useGalleryImages();
+  const { data: settings } = useGallerySettings();
+  const uploadMutation = useUploadImage();
+  const deleteMutation = useDeleteImage();
+
   const [passwordInput, setPasswordInput] = useState('');
   const [authError, setAuthError] = useState('');
-  const [images, setImages] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('others');
+  const [category, setCategory] = useState('');
   const [featured, setFeatured] = useState(false);
   const [files, setFiles] = useState([]);
-  const [selectedImage, setSelectedImage] = useState(null);
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef(null);
   const passwordRef = useRef(null);
 
-  useEffect(() => {
-    const token = localStorage.getItem(AUTH_KEY);
-    if (token) {
-      setAuthenticated(true);
-      fetchImages(token);
-    } else {
-      setAuthChecking(false);
-      setLoading(false);
-    }
-  }, []);
+  const categories = settings?.categories?.items || [];
 
   useEffect(() => {
-    if (!authenticated && !authChecking && passwordRef.current) {
+    if (ready && !token && passwordRef.current) {
       passwordRef.current.focus();
     }
-  }, [authenticated, authChecking]);
+  }, [isAuthed]);
 
-  function getAuthHeaders(token) {
-    const t = token || localStorage.getItem(AUTH_KEY);
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${t}`
-    };
+  useEffect(() => {
+    if (categories.length > 0 && !category) {
+      setCategory(categories[0].id);
+    }
+  }, [categories, category]);
+
+  function getCategoryName(catId) {
+    const cat = categories.find((c) => c.id === catId);
+    if (!cat) return catId;
+    return cat.name?.en || catId;
   }
 
   async function handleLogin(e) {
@@ -75,39 +68,12 @@ export default function GalleryAdmin() {
       setAuthError('Password is required');
       return;
     }
-    const testRes = await fetch('/api/gallery', {
-      method: 'POST',
-      headers: getAuthHeaders(passwordInput.trim()),
-      body: JSON.stringify({ image: '', title: '', description: '' })
-    });
-    if (testRes.status === 401 || testRes.status === 403) {
+    const ok = await login(passwordInput.trim());
+    if (!ok) {
       setAuthError('Invalid password');
       return;
     }
-    localStorage.setItem(AUTH_KEY, passwordInput.trim());
-    setAuthenticated(true);
     setPasswordInput('');
-    fetchImages(passwordInput.trim());
-  }
-
-  function handleLogout() {
-    localStorage.removeItem(AUTH_KEY);
-    setAuthenticated(false);
-    setImages([]);
-    setPasswordInput('');
-  }
-
-  async function fetchImages() {
-    try {
-      const res = await fetch('/api/gallery');
-      const data = await res.json();
-      if (!data.error) setImages(data);
-    } catch (error) {
-      console.error('Error fetching images:', error);
-    } finally {
-      setLoading(false);
-      setAuthChecking(false);
-    }
   }
 
   function compressImage(file, maxDim = MAX_DIM, quality = JPEG_QUALITY) {
@@ -166,7 +132,7 @@ export default function GalleryAdmin() {
     e.preventDefault();
     e.stopPropagation();
     setDragging(false);
-    const dropped = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+    const dropped = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'));
     processFiles(dropped);
   }
 
@@ -177,18 +143,16 @@ export default function GalleryAdmin() {
   }
 
   function processFiles(selected) {
-    const imagesOnly = selected.filter(f => f.type.startsWith('image/')).slice(0, MAX_FILES - files.length);
+    const imagesOnly = selected.filter((f) => f.type.startsWith('image/')).slice(0, MAX_FILES - files.length);
     if (imagesOnly.length === 0) return;
-
-    const oversized = imagesOnly.filter(f => f.size > MAX_FILE_SIZE);
+    const oversized = imagesOnly.filter((f) => f.size > MAX_FILE_SIZE);
     if (oversized.length > 0) {
-      alert(`Some files exceed 15MB:\n${oversized.map(f => `- ${f.name} (${(f.size / 1024 / 1024).toFixed(1)}MB)`).join('\n')}`);
+      alert(`Some files exceed 15MB:\n${oversized.map((f) => `- ${f.name} (${(f.size / 1024 / 1024).toFixed(1)}MB)`).join('\n')}`);
       return;
     }
-
     const compressed = [];
     for (const file of imagesOnly) {
-      const existing = files.find(f => f.originalName === file.name);
+      const existing = files.find((f) => f.originalName === file.name);
       if (existing) {
         compressed.push(existing);
         continue;
@@ -197,8 +161,7 @@ export default function GalleryAdmin() {
       const url = URL.createObjectURL(file);
       compressed.push({ id, originalName: file.name, preview: url, file, compressed: false });
     }
-
-    setFiles(prev => [...prev, ...compressed].slice(0, MAX_FILES));
+    setFiles((prev) => [...prev, ...compressed].slice(0, MAX_FILES));
   }
 
   async function compressPending() {
@@ -221,81 +184,61 @@ export default function GalleryAdmin() {
   }
 
   function removeFile(id) {
-    setFiles(prev => prev.filter(f => f.id !== id));
+    setFiles((prev) => prev.filter((f) => f.id !== id));
   }
 
   async function handleUpload() {
     const ready = await compressPending();
     if (!ready || ready.length === 0) return;
 
-    setUploading(true);
-    setUploadProgress({ current: 0, total: ready.length });
     const errors = [];
-
     for (let i = 0; i < ready.length; i++) {
-      setUploadProgress({ current: i + 1, total: ready.length });
       const file = ready[i];
       if (!file.preview) {
         errors.push(`"${file.originalName}": No image data`);
         continue;
       }
       try {
-        const res = await fetch('/api/gallery', {
-          method: 'POST',
-          headers: getAuthHeaders(),
-          body: JSON.stringify({
-            image: file.preview,
-            title,
-            description,
-            category,
-            featured
-          })
+        await uploadMutation.mutateAsync({
+          image: file.preview,
+          title,
+          description,
+          category,
+          featured,
         });
-        if (!res.ok) {
-          const data = await res.json();
-          errors.push(`"${file.originalName}": ${data.error || t('galleryAdmin.uploadFailed')}`);
-        }
       } catch (error) {
         errors.push(`"${file.originalName}": ${error.message}`);
       }
     }
 
-    setUploading(false);
-    setUploadProgress({ current: 0, total: 0 });
-
     if (errors.length > 0) {
       alert(`Upload completed with errors:\n${errors.join('\n')}`);
     }
-
     setFiles([]);
-    fetchImages();
   }
 
   async function handleDelete(id) {
     if (!confirm(t('galleryAdmin.deleteConfirm'))) return;
-
     try {
-      const res = await fetch(`/api/gallery?id=${id}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders()
-      });
-      if (res.ok) {
-        fetchImages();
-        setSelectedImage(null);
-      }
+      await deleteMutation.mutateAsync(id);
+      setSelectedImage(null);
     } catch (error) {
       console.error('Error deleting:', error);
     }
   }
 
-  if (!authenticated) {
+  if (!ready) {
     return (
       <div className="min-h-screen bg-bg-app flex items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="card max-w-md w-full mx-4 p-8"
-        >
+        <div className="text-muted">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!token) {
+    return (
+      <div className="min-h-screen bg-bg-app flex items-center justify-center">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card max-w-md w-full mx-4 p-8">
           <div className="text-center mb-2">
             <span className="text-4xl">🖼</span>
           </div>
@@ -316,14 +259,10 @@ export default function GalleryAdmin() {
                 {authError}
               </motion.p>
             )}
-            <button type="submit" className="btn w-full">
-              Authenticate
-            </button>
+            <button type="submit" className="btn w-full">Authenticate</button>
           </form>
           <div className="text-center mt-6">
-            <Link href="/" className="text-sm text-accent hover:underline">
-              {t('galleryAdmin.backToHome')}
-            </Link>
+            <Link href="/" className="text-sm text-accent hover:underline">{t('galleryAdmin.backToHome')}</Link>
           </div>
         </motion.div>
       </div>
@@ -333,7 +272,6 @@ export default function GalleryAdmin() {
   return (
     <div className="min-h-screen bg-bg-app">
       <div className="container py-8 md:py-12">
-        {/* Header */}
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
@@ -350,197 +288,96 @@ export default function GalleryAdmin() {
               <Link href="/galleryAdmin/dashboard" className="btn !text-xs !py-2 !px-3" style={{ background: 'linear-gradient(135deg, #FFE600, #FFC000)', color: '#111827' }}>
                 📊 Dashboard
               </Link>
-              <button onClick={handleLogout} className="btn !text-xs !py-2 !px-3 !bg-red-500 hover:!bg-red-600 !shadow-none">
+              <button onClick={logout} className="btn !text-xs !py-2 !px-3 !bg-red-500 hover:!bg-red-600 !shadow-none">
                 🚪 Logout
               </button>
             </div>
           </div>
         </motion.div>
 
-        {/* Upload Section - Two Columns */}
         <div className="grid md:grid-cols-5 gap-6 mb-12">
-          {/* Left Column - Drop Zone */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="md:col-span-3"
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="md:col-span-3">
             <div
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
               className={`card cursor-pointer transition-all duration-200 min-h-[240px] flex flex-col items-center justify-center text-center ${
-                dragging
-                  ? 'border-2 border-[#FFE600] shadow-[0_0_24px_rgba(255,230,0,0.15)]'
-                  : 'border-2 border-dashed border-panel-border hover:border-[#FFE600] hover:shadow-[0_0_16px_rgba(255,230,0,0.08)]'
+                dragging ? 'border-2 border-[#FFE600] shadow-[0_0_24px_rgba(255,230,0,0.15)]' : 'border-2 border-dashed border-panel-border hover:border-[#FFE600] hover:shadow-[0_0_16px_rgba(255,230,0,0.08)]'
               }`}
             >
-              <div className={`text-5xl mb-4 transition-transform duration-200 ${dragging ? 'scale-110' : ''}`}>
-                📁
-              </div>
-              <p className="text-lg font-semibold text-accent dark:text-white mb-2">
-                {dragging ? 'Drop files here' : 'Drop images here'}
-              </p>
+              <div className={`text-5xl mb-4 transition-transform duration-200 ${dragging ? 'scale-110' : ''}`}>📁</div>
+              <p className="text-lg font-semibold text-accent dark:text-white mb-2">{dragging ? 'Drop files here' : 'Drop images here'}</p>
               <p className="text-sm text-muted mb-4">or click to browse</p>
-              <span className="inline-block px-4 py-2 rounded-lg bg-accent/10 text-accent dark:text-[#FFE600] text-xs font-medium">
-                Browse Files
-              </span>
-              <p className="text-xs text-muted mt-4">
-                PNG, JPG, WebP, GIF, AVIF &middot; up to 15MB each
-              </p>
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
+              <span className="inline-block px-4 py-2 rounded-lg bg-accent/10 text-accent dark:text-[#FFE600] text-xs font-medium">Browse Files</span>
+              <p className="text-xs text-muted mt-4">PNG, JPG, WebP, GIF, AVIF &middot; up to 15MB each</p>
+              <input ref={fileInputRef} type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={handleFileSelect} className="hidden" />
             </div>
           </motion.div>
 
-          {/* Right Column - Metadata */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="md:col-span-2 space-y-4"
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="md:col-span-2 space-y-4">
             <div className="card">
-              <h2 className="text-sm font-semibold text-accent dark:text-[#FFE600] uppercase tracking-wider mb-4">
-                Image Details
-              </h2>
+              <h2 className="text-sm font-semibold text-accent dark:text-[#FFE600] uppercase tracking-wider mb-4">Image Details</h2>
               <div className="space-y-3">
                 <div>
                   <label className="block text-xs font-medium text-muted mb-1.5">{t('galleryAdmin.titleField')}</label>
-                  <input
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder={t('galleryAdmin.titlePlaceholder')}
-                    className="input text-sm"
-                  />
+                  <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('galleryAdmin.titlePlaceholder')} className="input text-sm" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-muted mb-1.5">{t('galleryAdmin.descField')}</label>
-                  <textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder={t('galleryAdmin.descPlaceholder')}
-                    className="input text-sm min-h-[80px] resize-none"
-                    rows={3}
-                  />
+                  <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t('galleryAdmin.descPlaceholder')} className="input text-sm min-h-[80px] resize-none" rows={3} />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-muted mb-1.5">{t('galleryAdmin.category')}</label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="input text-sm"
-                  >
-                    {categories.map(c => (
-                      <option key={c.value} value={c.value}>{t(c.labelKey)}</option>
+                  <select value={category} onChange={(e) => setCategory(e.target.value)} className="input text-sm">
+                    {categories.length === 0 && <option value="">No categories</option>}
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.emoji} {cat.name?.en || cat.id}
+                      </option>
                     ))}
                   </select>
                 </div>
                 <label className="flex items-center gap-3 cursor-pointer pt-1">
-                  <input
-                    type="checkbox"
-                    checked={featured}
-                    onChange={(e) => setFeatured(e.target.checked)}
-                    className="w-4 h-4 rounded border-panel-border accent-[#FFE600]"
-                  />
+                  <input type="checkbox" checked={featured} onChange={(e) => setFeatured(e.target.checked)} className="w-4 h-4 rounded border-panel-border accent-[#FFE600]" />
                   <span className="text-sm font-medium text-muted">{t('galleryAdmin.markFeatured')}</span>
                 </label>
               </div>
             </div>
 
-            {/* Upload Button + Progress */}
             <div className="card">
-              {uploading && (
-                <div className="mb-3 space-y-1.5">
-                  <div className="flex justify-between text-xs text-muted">
-                    <span>{t('galleryAdmin.uploadProgress', { current: uploadProgress.current, total: uploadProgress.total })}</span>
-                    <span className="font-medium text-accent dark:text-[#FFE600]">
-                      {Math.round((uploadProgress.current / uploadProgress.total) * 100)}%
-                    </span>
-                  </div>
-                  <div className="w-full h-1.5 bg-panel-border rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
-                      className="h-full bg-gradient-to-r from-[#FFE600] to-[#2D3277] rounded-full"
-                      transition={{ duration: 0.3 }}
-                    />
-                  </div>
-                </div>
-              )}
               <button
                 onClick={handleUpload}
-                disabled={files.length === 0 || uploading}
+                disabled={files.length === 0 || uploadMutation.isPending}
                 className="btn w-full text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {uploading
+                {uploadMutation.isPending
                   ? `⏳ ${t('galleryAdmin.uploading')}`
                   : files.length > 0
                     ? `↑ ${t('galleryAdmin.uploadAll', { count: files.length })}`
                     : `↑ ${t('galleryAdmin.uploadAll', { count: 0 })}`}
               </button>
-              <p className="text-[10px] text-muted text-center mt-2">
-                {t('galleryAdmin.rateLimit')}
-              </p>
+              <p className="text-[10px] text-muted text-center mt-2">{t('galleryAdmin.rateLimit')}</p>
             </div>
           </motion.div>
         </div>
 
-        {/* Selected Files Strip */}
         <AnimatePresence>
           {files.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="card mb-12"
-            >
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="card mb-12">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-accent dark:text-[#FFE600]">
-                  Selected ({files.length})
-                </h3>
-                <span className="text-[10px] text-muted">
-                  Click ✕ to remove
-                </span>
+                <h3 className="text-sm font-semibold text-accent dark:text-[#FFE600]">Selected ({files.length})</h3>
+                <span className="text-[10px] text-muted">Click ✕ to remove</span>
               </div>
               <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
                 {files.map((f) => (
-                  <motion.div
-                    key={f.id}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="relative flex-shrink-0 group"
-                  >
+                  <motion.div key={f.id} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="relative flex-shrink-0 group">
                     <div className="w-20 h-20 rounded-xl overflow-hidden ring-1 ring-panel-border">
-                      <img
-                        src={f.preview}
-                        alt={f.originalName}
-                        className="w-full h-full object-cover"
-                      />
+                      <img src={f.preview} alt={f.originalName} className="w-full h-full object-cover" />
                     </div>
-                    <button
-                      onClick={() => removeFile(f.id)}
-                      disabled={uploading}
-                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center text-xs hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity shadow-md disabled:hidden"
-                    >
-                      ✕
-                    </button>
-                    <p className="text-[9px] text-muted mt-1 max-w-20 truncate text-center">
-                      {f.originalName}
-                    </p>
-                    {f.compressedSize && (
-                      <p className="text-[8px] text-green-600 dark:text-green-400 text-center">
-                        {(f.compressedSize / 1024).toFixed(0)}KB
-                      </p>
-                    )}
+                    <button onClick={() => removeFile(f.id)} disabled={uploadMutation.isPending} className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center text-xs hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity shadow-md disabled:hidden">✕</button>
+                    <p className="text-[9px] text-muted mt-1 max-w-20 truncate text-center">{f.originalName}</p>
+                    {f.compressedSize && <p className="text-[8px] text-green-600 dark:text-green-400 text-center">{(f.compressedSize / 1024).toFixed(0)}KB</p>}
                   </motion.div>
                 ))}
               </div>
@@ -548,7 +385,6 @@ export default function GalleryAdmin() {
           )}
         </AnimatePresence>
 
-        {/* Existing Images */}
         <div className="mb-6">
           <h2 className="title text-xl">
             {t('galleryAdmin.existing')}
@@ -556,9 +392,9 @@ export default function GalleryAdmin() {
           </h2>
         </div>
 
-        {loading ? (
+        {isLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {[1,2,3,4,5,6].map((i) => (
+            {[1, 2, 3, 4, 5, 6].map((i) => (
               <div key={i} className="card p-3">
                 <div className="aspect-square skeleton rounded-lg mb-3" />
                 <div className="h-4 w-2/3 skeleton mb-2" />
@@ -567,11 +403,7 @@ export default function GalleryAdmin() {
             ))}
           </div>
         ) : images.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-16 text-muted"
-          >
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-16 text-muted">
             <div className="text-5xl mb-4">📸</div>
             <p className="text-lg font-medium mb-1">{t('galleryAdmin.noImages')}</p>
           </motion.div>
@@ -590,32 +422,17 @@ export default function GalleryAdmin() {
                   layout
                 >
                   {img.featured && (
-                    <span className="absolute top-4 right-4 bg-[#FFE600] text-[#111827] text-[10px] font-bold px-2 py-0.5 rounded-full z-10 shadow-md">
-                      ★ Featured
-                    </span>
+                    <span className="absolute top-4 right-4 bg-[#FFE600] text-[#111827] text-[10px] font-bold px-2 py-0.5 rounded-full z-10 shadow-md">★ Featured</span>
                   )}
                   <div className="aspect-square rounded-xl overflow-hidden mb-3 ring-1 ring-panel-border/50">
-                    <img
-                      src={img.url}
-                      alt={img.title || 'Gallery image'}
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      loading="lazy"
-                    />
+                    <img src={img.url} alt={img.title || 'Gallery image'} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" />
                   </div>
                   <div className="space-y-1">
-                    {img.title && (
-                      <h3 className="text-xs font-semibold text-accent dark:text-white truncate">
-                        {img.title}
-                      </h3>
-                    )}
+                    {img.title && <h3 className="text-xs font-semibold text-accent dark:text-white truncate">{img.title}</h3>}
                     <div className="flex items-center justify-between">
-                      {img.description && (
-                        <p className="text-[10px] text-muted truncate flex-1 mr-2">
-                          {img.description}
-                        </p>
-                      )}
+                      {img.description && <p className="text-[10px] text-muted truncate flex-1 mr-2">{img.description}</p>}
                       <span className="text-[9px] uppercase tracking-wider text-muted bg-accent/5 dark:bg-white/10 px-1.5 py-0.5 rounded flex-shrink-0">
-                        {t('galleryAdmin.category' + img.category.charAt(0).toUpperCase() + img.category.slice(1))}
+                        {getCategoryName(img.category)}
                       </span>
                     </div>
                   </div>
@@ -631,6 +448,8 @@ export default function GalleryAdmin() {
         onClose={() => setSelectedImage(null)}
         onDelete={handleDelete}
         deleteLabel={t('galleryAdmin.delete')}
+        categoryLabel={selectedImage ? getCategoryName(selectedImage.category) : ''}
+        categoryEmoji={selectedImage ? categories.find(c => c.id === selectedImage.category)?.emoji || '📁' : ''}
       />
     </div>
   );

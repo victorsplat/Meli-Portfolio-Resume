@@ -1,41 +1,31 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useI18n } from '@/lib/i18n';
 import { usePageTitle } from '@/lib/usePageTitle';
+import { useGalleryImages, useGallerySettings } from '@/hooks/useGallery';
 import ScrollExpandMedia from '@/components/ui/scroll-expansion-hero';
 
 export default function GalleryPage() {
   const { t, lang } = useI18n();
   usePageTitle('gallery.title');
   const router = useRouter();
-  const [settings, setSettings] = useState(null);
-  const [heroImages, setHeroImages] = useState([]);
   const [expanded, setExpanded] = useState(false);
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const [imgRes, setRes] = await Promise.all([
-          fetch('/api/gallery'),
-          fetch('/api/gallery/settings'),
-        ]);
-        const imgData = await imgRes.json();
-        const setData = await setRes.json();
-        if (!setData.error) setSettings(setData);
+  const { data: images = [], isLoading } = useGalleryImages();
+  const { data: settings } = useGallerySettings();
 
-        if (!imgData.error && imgData.length > 0) {
-          const featured = imgData.filter(img => img.featured);
-          setHeroImages(featured.length > 0 ? featured : imgData.slice(0, 5));
-        }
-      } catch (err) {
-        console.error('Error fetching gallery data:', err);
-      }
-    }
-    fetchData();
-  }, []);
+  const heroImageIds = settings?.hero?.imageIds || [];
+  const heroSettingsImages = heroImageIds
+    .map((id) => images.find((i) => i._id === id))
+    .filter(Boolean);
+  const featuredImages = images.filter((img) => img.featured);
+
+  const mediaImage = heroSettingsImages[0] || featuredImages[0] || images[0];
+  const bgImage = heroSettingsImages[1] || featuredImages[1] || mediaImage;
+  const postScrollBg = heroSettingsImages[2] || heroSettingsImages[0] || mediaImage;
 
   function getSetting(path) {
     if (!settings) return '';
@@ -49,16 +39,34 @@ export default function GalleryPage() {
     return val || '';
   }
 
-  const currentHero = heroImages[0];
   const heroTitle = getSetting('hero.title') || t('gallery.title');
   const heroSubtitle = getSetting('hero.subtitle') || t('gallery.subtitle');
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-bg-app flex items-center justify-center">
+        <div className="w-16 h-16 border-4 border-accent/30 border-t-accent rounded-full animate-spin mb-6" />
+        <p className="text-muted text-lg">{t('gallery.loading')}</p>
+      </div>
+    );
+  }
+
+  if (!mediaImage?.url) {
+    return (
+      <div className="min-h-screen bg-bg-app flex flex-col items-center justify-center text-center px-4">
+        <div className="text-6xl mb-6">🖼️</div>
+        <p className="text-muted text-lg">{t('gallery.noImages')}</p>
+        <p className="text-sm text-muted mt-2">{t('gallery.addImages')}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-bg-app">
       <ScrollExpandMedia
         mediaType="image"
-        mediaSrc={currentHero?.url || ''}
-        bgImageSrc={currentHero?.url || ''}
+        mediaSrc={mediaImage.url}
+        bgImageSrc={bgImage.url}
         title={heroTitle}
         date={heroSubtitle}
         scrollToExpand={t('gallery.scrollToExpand')}
@@ -66,22 +74,34 @@ export default function GalleryPage() {
         onExpandComplete={() => setExpanded(true)}
       >
         {expanded && (
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="flex flex-col items-center justify-center gap-6 py-12"
-          >
-            <p className="text-lg text-muted max-w-xl text-center">
-              {t('gallery.exploreDesc')}
-            </p>
-            <button
-              onClick={() => router.push('/gallery/explore')}
-              className="btn text-lg px-10 py-4"
+          <div className="relative w-full min-h-[60vh] flex items-center justify-center">
+            {postScrollBg?.url && (
+              <div className="absolute inset-0 -z-10">
+                <img
+                  src={postScrollBg.url}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  style={{ filter: 'brightness(0.5)' }}
+                />
+              </div>
+            )}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="flex flex-col items-center justify-center gap-6 py-24 px-4 relative z-10"
             >
-              {t('gallery.enterGallery')}
-            </button>
-          </motion.div>
+              <p className="text-lg text-white max-w-xl text-center">
+                {t('gallery.exploreDesc')}
+              </p>
+              <button
+                onClick={() => router.push('/gallery/explore')}
+                className="btn text-lg px-10 py-4"
+              >
+                {t('gallery.enterGallery')}
+              </button>
+            </motion.div>
+          </div>
         )}
       </ScrollExpandMedia>
     </div>
