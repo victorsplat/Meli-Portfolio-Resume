@@ -6,7 +6,7 @@ import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { useTheme } from '@/lib/useTheme';
 import { useI18n } from '@/lib/i18n';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
-import MatrixShaders from '@/components/ui/matrix';
+import MatrixRain from '@/components/ui/matrix';
 import MeliLogoSvg from '@assets/svg/melilogo.svg';
 import MeliLogoDarkSvg from '@assets/svg/melilogo_dark.svg';
 
@@ -16,9 +16,12 @@ const MotionMeliLogo = motion.create(MeliLogoSvg);
 const MotionMeliLogoDark = motion.create(MeliLogoDarkSvg);
 
 const Hero = ({ isMobile }) => {
+  const [mounted, setMounted] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const { t, lang } = useI18n();
+
+  useEffect(() => { setMounted(true); }, []);
 
   const baseText = t('hero.portfolioTitle');
   const count = useMotionValue(0);
@@ -72,9 +75,9 @@ const Hero = ({ isMobile }) => {
         <div className="absolute -top-24 -left-24 w-[500px] h-80 bg-[#585FD9] rounded-full blur-3xl" />
         <div className="absolute -bottom-32 -right-32 w-[600px] h-96 bg-[#585FD9] rounded-full blur-3xl" />
       </div>
-      {theme === 'dark' && (
+      {mounted && theme === 'dark' && (
         <div className="absolute inset-0 pointer-events-none opacity-40">
-          <MatrixShaders speed={0.4} density={1.5} />
+          <MatrixRain speed={0.4} density={1.5} />
         </div>
       )}
       <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-[var(--bg-hero)] to-transparent pointer-events-none z-10" />
@@ -82,24 +85,33 @@ const Hero = ({ isMobile }) => {
       <div className="relative z-20">
         <div className="flex items-center justify-between min-h-[80px] mb-12 max-md:mb-6">
           <div className="flex h-[70px] w-auto max-md:h-[50px]">
-          {(() => {
-            const LogoComponent = theme === 'dark' ? MotionMeliLogoDark : MotionMeliLogo;
-            const logoProps = {
-              "aria-label": "Mercado Livre Logo",
-              className: "h-full w-auto max-w-[260px] max-md:max-w-[180px] max-md:max-h-[50px] m-0 cursor-pointer flex items-center justify-center",
-              initial: { opacity: 0, y: -30 },
-              animate: { opacity: 1, y: 0 },
-              whileHover: { scale: 1.2, y: -5 },
-              transition: {
+            <MotionMeliLogo
+              aria-label="Mercado Livre Logo"
+              className="block dark:hidden h-full w-auto max-w-[260px] max-md:max-w-[180px] max-md:max-h-[50px] m-0 cursor-pointer flex items-center justify-center"
+              initial={{ opacity: 0, y: -30 }}
+              animate={{ opacity: 1, y: 0 }}
+              whileHover={{ scale: 1.2, y: -5 }}
+              transition={{
                 y: { type: "spring", stiffness: 300 },
                 opacity: { duration: 1, delay: 0.8 },
                 scale: { type: "spring", stiffness: 400, damping: 10 }
-              },
-              onClick: () => window.scrollTo({ top: 0, behavior: 'smooth' })
-            };
-            return <LogoComponent {...logoProps} />;
-          })()}
-        </div>
+              }}
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            />
+            <MotionMeliLogoDark
+              aria-label="Mercado Livre Logo"
+              className="hidden dark:block h-full w-auto max-w-[260px] max-md:max-w-[180px] max-md:max-h-[50px] m-0 cursor-pointer flex items-center justify-center"
+              initial={{ opacity: 0, y: -30 }}
+              animate={{ opacity: 1, y: 0 }}
+              whileHover={{ scale: 1.2, y: -5 }}
+              transition={{
+                y: { type: "spring", stiffness: 300 },
+                opacity: { duration: 1, delay: 0.8 },
+                scale: { type: "spring", stiffness: 400, damping: 10 }
+              }}
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            />
+          </div>
         <div className="flex items-center gap-2">
           <LanguageSwitcher />
           <motion.button
@@ -109,7 +121,8 @@ const Hero = ({ isMobile }) => {
             whileHover={{ scale: 1.1 }}
             aria-label={t('hero.toggleTheme')}
           >
-            {theme === 'light' ? <IoMoonOutline size={22} /> : <IoSunnyOutline size={22} />}
+            <IoMoonOutline size={22} className="block dark:hidden" />
+            <IoSunnyOutline size={22} className="hidden dark:block" />
           </motion.button>
         </div>
       </div>

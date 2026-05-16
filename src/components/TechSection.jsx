@@ -18,7 +18,6 @@ import {
   TbBrandAdobePhotoshop,
   TbBrandFramer,
   TbComponents,
-  TbChartBar,
   TbApi,
   TbCamera,
   TbVideoPlus,
@@ -26,14 +25,23 @@ import {
   TbPhoto,
   TbPlayerPlay,
   TbColorSwatch,
-  TbMovie
+  TbMovie,
+  TbBrain,
+  TbCode,
+  TbTerminal2,
+  TbPointer
 } from 'react-icons/tb';
 import {
   SiJavascript,
   SiPostman,
   SiVercel,
   SiAxios,
-  SiCanva
+  SiCanva,
+  SiEslint,
+  SiPrettier,
+  SiGithubactions,
+  SiSentry,
+  SiNotion
 } from 'react-icons/si';
 
 const stackData = [
@@ -46,7 +54,6 @@ const stackData = [
       { name: "shadcn/ui", icon: <TbComponents />, color: "var(--text-main)", description: "Reusable UI components." },
       { name: "Framer Motion", icon: <TbBrandFramer />, color: "#0055FF", description: "Animation library." },
       { name: "Lottie", icon: <TbPlayerPlay />, color: "#00D4AA", description: "Vector animation player." },
-      { name: "Re-Charts", icon: <TbChartBar />, color: "#22B5BF", description: "Composable Chart library." },
       { name: "HTML5", icon: <TbBrandHtml5 />, color: "#E34F26", description: "Web structure markup." },
       { name: "CSS3", icon: <TbBrandCss3 />, color: "#1572B6", description: "Advanced web styling." },
       { name: "JavaScript", icon: <SiJavascript />, color: "#F7DF1E", description: "Web programming." },
@@ -85,6 +92,20 @@ const stackData = [
       { name: "Figma", icon: <TbBrandFigma />, color: "#F24E1E", description: "UI/UX design & prototyping." },
       { name: "Photography", icon: <TbCamera />, color: "#E4405F", description: "Portrait, product & event photography." },
       { name: "Video Editing", icon: <TbVideoPlus />, color: "#FF6C37", description: "Reels, social media & event videos." },
+      { name: "Notion", icon: <SiNotion />, color: "var(--text-main)", description: "Docs & knowledge base." },
+    ]
+  },
+  {
+    category: "Dev Tooling",
+    items: [
+      { name: "ESLint", icon: <SiEslint />, color: "#4B32C3", description: "Code linting & analysis." },
+      { name: "Prettier", icon: <SiPrettier />, color: "#F7B93E", description: "Code formatting." },
+      { name: "Turbopack", icon: <TbCode />, color: "var(--text-main)", description: "Incremental bundler." },
+      { name: "AI-Assisted", icon: <TbBrain />, color: "#585FD9", description: "AI pair programming." },
+      { name: "OpenCode", icon: <TbTerminal2 />, color: "var(--text-main)", description: "AI coding agent." },
+      { name: "Cursor", icon: <TbPointer />, color: "var(--text-main)", description: "AI code editor." },
+      { name: "GitHub Actions", icon: <SiGithubactions />, color: "#2088FF", description: "CI/CD automation." },
+      { name: "Sentry", icon: <SiSentry />, color: "#FB4226", description: "Error monitoring." },
     ]
   }
 ];
@@ -155,7 +176,8 @@ const TechSection = () => {
   };
 
   const fullWidthGroups = stackData.slice(0, 2);
-  const splitGroups = stackData.slice(2);
+  const splitGroups = stackData.slice(2, 4);
+  const toolingGroups = stackData.slice(4);
 
   return (
     <motion.section
@@ -168,31 +190,46 @@ const TechSection = () => {
     >
       <h2 className="title">{t('tech.title')}</h2>
 
-      {fullWidthGroups.map((group, idx) => {
-        const categoryKey = group.category === 'Front-end' ? 'frontend' : 'backend';
-        return (
-        <div key={idx} className="mb-12">
-          <h3 className="text-lg font-bold uppercase tracking-widest text-accent mb-6 opacity-80">{t('tech.' + categoryKey)}</h3>
+      <div className="relative flex flex-col md:flex-row mb-12">
+        <div className="flex-1 min-w-0 md:pr-8">
+          <h3 className="text-lg font-bold uppercase tracking-widest text-accent mb-6 opacity-80">{t('tech.frontend')}</h3>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-6 max-md:grid-cols-3 max-md:gap-4 max-sm:grid-cols-2">
-            {group.items.map((item, i) => renderItem(item, i, 'full-' + idx))}
+            {fullWidthGroups[0].items.map((item, i) => renderItem(item, i, 'full-0'))}
           </div>
         </div>
-        );
-      })}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-        {splitGroups.map((group, idx) => {
-          const categoryKey = group.category === 'Creative & Design' ? 'creative' : 'tools';
-          return (
-          <div key={idx}>
-            <h3 className="text-lg font-bold uppercase tracking-widest text-accent mb-6 opacity-80">{t('tech.' + categoryKey)}</h3>
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(110px,1fr))] gap-3">
-              {group.items.map((item, i) => renderItem(item, i, 'split-' + idx))}
-            </div>
+        <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-accent to-transparent opacity-40 -translate-x-1/2" />
+        <div className="flex-1 min-w-0 md:pl-8 mt-8 md:mt-0">
+          <h3 className="text-lg font-bold uppercase tracking-widest text-accent mb-6 opacity-80">{t('tech.backend')}</h3>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-6 max-md:grid-cols-3 max-md:gap-4 max-sm:grid-cols-2">
+            {fullWidthGroups[1].items.map((item, i) => renderItem(item, i, 'full-1'))}
           </div>
-          );
-        })}
+        </div>
       </div>
+
+      <div className="relative flex flex-col md:flex-row mb-12">
+        <div className="flex-1 min-w-0 md:pr-8">
+          <h3 className="text-lg font-bold uppercase tracking-widest text-accent mb-6 opacity-80">{t('tech.tools')}</h3>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(110px,1fr))] gap-3">
+            {splitGroups[0].items.map((item, i) => renderItem(item, i, 'split-0'))}
+          </div>
+        </div>
+        <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-accent to-transparent opacity-40 -translate-x-1/2" />
+        <div className="flex-1 min-w-0 md:pl-8 mt-8 md:mt-0">
+          <h3 className="text-lg font-bold uppercase tracking-widest text-accent mb-6 opacity-80">{t('tech.creative')}</h3>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(110px,1fr))] gap-3">
+            {splitGroups[1].items.map((item, i) => renderItem(item, i, 'split-1'))}
+          </div>
+        </div>
+      </div>
+
+      {toolingGroups.map((group, idx) => (
+        <div key={idx} className="mb-6">
+          <h3 className="text-lg font-bold uppercase tracking-widest text-accent mb-6 opacity-80 text-center">{t('tech.devTooling')}</h3>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-4 max-md:grid-cols-3 max-md:gap-3 max-sm:grid-cols-2">
+            {group.items.map((item, i) => renderItem(item, i, 'tooling-' + idx))}
+          </div>
+        </div>
+      ))}
     </motion.section>
   );
 };
