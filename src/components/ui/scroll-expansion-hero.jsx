@@ -122,9 +122,6 @@ export default function ScrollExpandMedia({
   const mediaHeight = 400 + scrollProgress * (isMobileState ? 200 : 400);
   const textTranslateX = scrollProgress * (isMobileState ? 180 : 150);
 
-  const firstWord = title ? title.split(' ')[0] : '';
-  const restOfTitle = title ? title.split(' ').slice(1).join(' ') : '';
-
   return (
     <div ref={sectionRef} className="transition-colors duration-700 ease-in-out overflow-x-hidden">
       <section className="relative flex flex-col items-center justify-start min-h-[100dvh]">
@@ -251,16 +248,10 @@ export default function ScrollExpandMedia({
                 }`}
               >
                 <motion.h2
-                  className="text-4xl md:text-5xl lg:text-6xl font-bold text-blue-200 transition-none"
+                  className="text-4xl md:text-5xl lg:text-6xl font-bold text-blue-200 text-center transition-none"
                   style={{ transform: `translateX(-${textTranslateX}vw)` }}
                 >
-                  {firstWord}
-                </motion.h2>
-                <motion.h2
-                  className="text-4xl md:text-5xl lg:text-6xl font-bold text-center text-blue-200 transition-none"
-                  style={{ transform: `translateX(${textTranslateX}vw)` }}
-                >
-                  {restOfTitle}
+                  {title}
                 </motion.h2>
               </div>
             </div>
