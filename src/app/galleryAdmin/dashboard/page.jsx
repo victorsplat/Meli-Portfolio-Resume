@@ -3,8 +3,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/lib/stores/authStore';
 import { useGallerySettings, useGalleryImages, useUpdateSettings } from '@/hooks/useGallery';
+import { cn } from '@/lib/utils';
 
 const LANGUAGES = [
   { key: 'en', label: 'EN', flag: '🇺🇸' },
@@ -42,7 +44,7 @@ async function translateText(text, source, target) {
 }
 
 function slugify(str) {
-  return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-/g, '');
 }
 
 export default function DashboardPage() {
@@ -62,8 +64,7 @@ export default function DashboardPage() {
   const [translating, setTranslating] = useState({});
   const [newCategory, setNewCategory] = useState({ id: '', name: { en: '', es: '', pt: '' }, emoji: '📁' });
   const [showCategoryForm, setShowCategoryForm] = useState(false);
-  const [expandedField, setExpandedField] = useState(null);
-  const [draftMove, setDraftMove] = useState(null);
+  const [editingCat, setEditingCat] = useState(null);
 
   const passwordRef = useCallback((el) => el?.focus(), []);
 
@@ -73,12 +74,16 @@ export default function DashboardPage() {
 
   const categoryList = localSettings?.categories?.items || [];
 
-  const getCategoryLabel = useMemo(() => {
-    return (catId) => {
-      const cat = categoryList.find((c) => c.id === catId);
-      return cat?.name || catId;
-    };
-  }, [categoryList]);
+  const imageCountByCategory = useMemo(() => {
+    const counts = {};
+    if (images) {
+      for (const img of images) {
+        const cat = img.category || 'others';
+        counts[cat] = (counts[cat] || 0) + 1;
+      }
+    }
+    return counts;
+  }, [images]);
 
   function getSelectedImages(sectionId) {
     const ids = localSettings?.[sectionId]?.imageIds || [];
@@ -117,6 +122,7 @@ export default function DashboardPage() {
     setLocalSettings((prev) => {
       const ids = prev?.hero?.imageIds || [];
       const exists = ids.includes(imageId);
+      if (!exists && ids.length >= 3) return prev;
       return {
         ...prev,
         hero: {
@@ -127,12 +133,14 @@ export default function DashboardPage() {
     });
   }
 
-  function reorderHeroImage(fromIdx, toIdx) {
+  function setHeroSlot(slotIndex, imageId) {
     setLocalSettings((prev) => {
-      const ids = [...(prev?.hero?.imageIds || [])];
-      if (toIdx < 0 || toIdx >= ids.length) return prev;
-      [ids[fromIdx], ids[toIdx]] = [ids[toIdx], ids[fromIdx]];
-      return { ...prev, hero: { ...prev.hero, imageIds: ids } };
+      const ids = [...(prev?.hero?.imageIds || []), null, null, null].slice(0, 3);
+      const existsIdx = ids.indexOf(imageId);
+      if (existsIdx !== -1) ids[existsIdx] = null;
+      ids[slotIndex] = imageId;
+      const cleaned = ids.filter(Boolean);
+      return { ...prev, hero: { ...prev.hero, imageIds: cleaned } };
     });
   }
 
@@ -213,6 +221,16 @@ export default function DashboardPage() {
     }));
   }
 
+  function updateCategoryField(id, field, value) {
+    setLocalSettings((prev) => ({
+      ...prev,
+      categories: {
+        ...prev.categories,
+        items: prev.categories.items.map((c) => (c.id === id ? { ...c, [field]: value } : c)),
+      },
+    }));
+  }
+
   function moveCategory(id, direction) {
     setLocalSettings((prev) => {
       const items = [...prev.categories.items];
@@ -242,7 +260,7 @@ export default function DashboardPage() {
           <form onSubmit={handleLogin} className="space-y-4">
             <input ref={passwordRef} type="password" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} placeholder="Admin password" className="input text-center text-lg" autoFocus />
             {authError && <p className="text-red-500 text-sm text-center">{authError}</p>}
-            <button type="submit" className="btn w-full">Authenticate</button>
+            <Button type="submit" className="w-full">Authenticate</Button>
           </form>
           <div className="text-center mt-6">
             <Link href="/" className="text-sm text-accent hover:underline">Back to Home</Link>
@@ -258,7 +276,7 @@ export default function DashboardPage() {
         <div className="card max-w-md w-full mx-4 p-8 text-center">
           <div className="text-4xl mb-4">⚠️</div>
           <p className="text-muted mb-4">Failed to load settings.</p>
-          <button onClick={() => refetch()} className="btn">Retry</button>
+          <Button onClick={() => refetch()}>Retry</Button>
         </div>
       </div>
     );
@@ -287,7 +305,7 @@ export default function DashboardPage() {
             <div className="flex flex-wrap gap-2">
               <Link href="/galleryAdmin" className="btn btn-sm">← Image Manager</Link>
               <Link href="/gallery" className="btn btn-sm btn-secondary">View Gallery</Link>
-              <button onClick={logout} className="btn btn-sm !bg-red-500 hover:!bg-red-600">Logout</button>
+              <Button variant="destructive" size="sm" onClick={logout}>Logout</Button>
             </div>
           </div>
         </motion.div>
@@ -298,11 +316,12 @@ export default function DashboardPage() {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 flex items-center gap-1.5 ${
+              className={cn(
+                "px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 flex items-center gap-1.5",
                 tab === t.id
                   ? 'bg-[#FFE600] text-[#111827] shadow-sm'
                   : 'text-muted hover:text-accent dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/10'
-              }`}
+              )}
             >
               <span>{t.icon}</span>
               <span className="hidden sm:inline">{t.label}</span>
@@ -318,7 +337,7 @@ export default function DashboardPage() {
                 <div className="w-10 h-10 rounded-xl bg-[#FFE600]/20 flex items-center justify-center text-lg">🎬</div>
                 <div>
                   <h2 className="text-lg font-bold">Hero Section</h2>
-                  <p className="text-xs text-muted">Scroll-to-expand hero — title, subtitle, and ordered images</p>
+                  <p className="text-xs text-muted">Scroll-to-expand hero — title, subtitle, and 3 ordered images</p>
                 </div>
               </div>
 
@@ -378,7 +397,7 @@ export default function DashboardPage() {
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h3 className="text-sm font-semibold">Hero Images</h3>
-                    <p className="text-xs text-muted mt-0.5">Select up to 3 images. Order defines their role.</p>
+                    <p className="text-xs text-muted mt-0.5">Assign images to each slot. Max 3.</p>
                   </div>
                   <span className="text-xs font-medium text-accent dark:text-[#FFE600]">{orderedHero.length}/3</span>
                 </div>
@@ -389,80 +408,82 @@ export default function DashboardPage() {
                   </p>
                 ) : (
                   <div className="space-y-4">
-                    {/* Role explanation */}
-                    <div className="grid grid-cols-3 gap-3">
-                      {HERO_POSITIONS.map((pos) => (
-                        <div key={pos.index} className={`p-3 rounded-xl text-center text-xs border transition-all ${
-                          orderedHero[pos.index]
-                            ? 'bg-accent/5 dark:bg-white/10 border-accent/20 dark:border-white/20'
-                            : 'bg-accent/5 dark:bg-white/5 border-dashed border-panel-border opacity-50'
-                        }`}>
-                          <div className="font-semibold text-accent dark:text-[#FFE600] mb-0.5">
-                            #{pos.index + 1} — {pos.label}
-                          </div>
-                          <div className="text-muted">{pos.desc}</div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* All images grid for selection */}
-                    <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
-                      {images.map((img) => {
-                        const orderIdx = (localSettings?.hero?.imageIds || []).indexOf(img._id);
-                        const selected = orderIdx !== -1;
+                    {/* 3 fixed slots */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+                      {HERO_POSITIONS.map((pos) => {
+                        const img = orderedHero[pos.index];
                         return (
-                          <button
-                            key={img._id}
-                            onClick={() => toggleHeroImage(img._id)}
-                            className={`relative aspect-square rounded-xl overflow-hidden ring-2 transition-all duration-200 ${
-                              selected
-                                ? 'ring-[#FFE600] ring-offset-1 ring-offset-[var(--bg-app)] scale-105'
-                                : 'ring-panel-border hover:ring-accent/50 opacity-60 hover:opacity-100'
-                            }`}
-                          >
-                            <img src={img.url} alt="" className="w-full h-full object-cover" />
-                            {selected && (
-                              <div className="absolute inset-0 bg-[#FFE600]/15 flex items-center justify-center">
-                                <span className="w-7 h-7 rounded-full bg-[#FFE600] text-[#111827] text-xs font-bold flex items-center justify-center shadow-lg">
-                                  {orderIdx + 1}
-                                </span>
-                              </div>
-                            )}
-                          </button>
+                          <div key={pos.index} className={cn(
+                            "p-3 rounded-xl border text-center text-xs transition-all",
+                            img
+                              ? 'bg-accent/5 dark:bg-white/10 border-accent/20 dark:border-white/20'
+                              : 'bg-accent/5 dark:bg-white/5 border-dashed border-panel-border'
+                          )}>
+                            <div className="font-semibold text-accent dark:text-[#FFE600] mb-0.5">
+                              #{pos.index + 1} — {pos.label}
+                            </div>
+                            <div className="text-muted mb-2">{pos.desc}</div>
+                            <div className="relative aspect-video rounded-lg overflow-hidden bg-white/30 dark:bg-white/5">
+                              {img ? (
+                                <>
+                                  <img src={img.url} alt="" className="w-full h-full object-cover" />
+                                  <Button
+                                    variant="ghost"
+                                    size="icon-xs"
+                                    onClick={() => setHeroSlot(pos.index, null)}
+                                    className="absolute top-1 right-1 bg-black/50 text-white hover:bg-black/70 rounded-full w-5 h-5"
+                                  >
+                                    ✕
+                                  </Button>
+                                </>
+                              ) : (
+                                <div className="flex items-center justify-center h-full text-muted">
+                                  <span className="text-lg">+</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         );
                       })}
                     </div>
 
-                    {/* Ordered preview strip */}
-                    {orderedHero.length > 0 && (
-                      <div className="p-4 rounded-xl bg-accent/5 dark:bg-white/5 border border-panel-border">
-                        <div className="flex items-center gap-1.5 mb-3">
-                          <span className="text-xs font-semibold">Selected Order</span>
-                          <span className="text-[10px] text-muted">— click arrows to reorder</span>
-                        </div>
-                        <div className="flex gap-3 flex-wrap">
-                          {orderedHero.map((img, idx) => (
-                            <div key={img._id} className="flex items-center gap-2 bg-white/60 dark:bg-white/10 px-2 py-1.5 rounded-lg border border-panel-border">
-                              <div className="relative w-10 h-10 rounded-lg overflow-hidden flex-shrink-0">
-                                <img src={img.url} alt="" className="w-full h-full object-cover" />
-                                <div className="absolute top-0 left-0 w-4 h-4 bg-[#FFE600] text-[#111827] text-[9px] font-bold flex items-center justify-center rounded-br-lg">
-                                  {idx + 1}
+                    {/* All images grid for selection */}
+                    <p className="text-xs text-muted mb-2">Click an image to assign to slot 1, or use slot buttons below:</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {images.map((img) => {
+                        const slotIdx = (localSettings?.hero?.imageIds || []).indexOf(img._id);
+                        const selected = slotIdx !== -1;
+                        return (
+                          <div key={img._id} className="relative group">
+                            <button
+                              onClick={() => {
+                                if (selected) {
+                                  setHeroSlot(slotIdx, null);
+                                } else {
+                                  const firstEmpty = orderedHero.length;
+                                  if (firstEmpty < 3) setHeroSlot(firstEmpty, img._id);
+                                }
+                              }}
+                              className={cn(
+                                "relative w-14 h-14 rounded-lg overflow-hidden ring-2 transition-all",
+                                selected
+                                  ? 'ring-[#FFE600] ring-offset-1 ring-offset-[var(--bg-app)] scale-105'
+                                  : 'ring-panel-border hover:ring-accent/50 opacity-60 hover:opacity-100'
+                              )}
+                            >
+                              <img src={img.url} alt="" className="w-full h-full object-cover" />
+                              {selected && (
+                                <div className="absolute inset-0 bg-[#FFE600]/15 flex items-center justify-center">
+                                  <span className="w-5 h-5 rounded-full bg-[#FFE600] text-[#111827] text-[10px] font-bold flex items-center justify-center shadow-lg">
+                                    {slotIdx + 1}
+                                  </span>
                                 </div>
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <p className="text-xs font-medium truncate max-w-[100px]">{img.title || 'Untitled'}</p>
-                                <p className="text-[10px] text-muted">{HERO_POSITIONS[idx]?.label || `${idx + 1}º`}</p>
-                              </div>
-                              <div className="flex gap-0.5">
-                                <button onClick={() => reorderHeroImage(idx, idx - 1)} disabled={idx === 0} className="w-5 h-5 flex items-center justify-center rounded text-muted hover:text-accent disabled:opacity-20 text-xs">↑</button>
-                                <button onClick={() => reorderHeroImage(idx, idx + 1)} disabled={idx === orderedHero.length - 1} className="w-5 h-5 flex items-center justify-center rounded text-muted hover:text-accent disabled:opacity-20 text-xs">↓</button>
-                              </div>
-                              <button onClick={() => toggleHeroImage(img._id)} className="w-5 h-5 flex items-center justify-center rounded text-red-400 hover:text-red-500 text-xs">✕</button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                              )}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
@@ -478,15 +499,22 @@ export default function DashboardPage() {
                 <div className="w-10 h-10 rounded-xl bg-[#FFE600]/20 flex items-center justify-center text-lg">🏷️</div>
                 <div>
                   <h2 className="text-lg font-bold">Categories</h2>
-                  <p className="text-xs text-muted">Gallery filtering categories — changes reflect instantly</p>
+                  <p className="text-xs text-muted">Gallery filtering categories — changes reflect instantly on all pages</p>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-xs text-muted">{categoryList.length} categories</span>
-                <button onClick={() => setShowCategoryForm(true)} className="btn btn-sm">+ Add Category</button>
+              {/* Header stats */}
+              <div className="flex items-center justify-between mb-6 pb-4 border-b border-panel-border">
+                <div className="flex items-center gap-4">
+                  <div className="text-sm"><span className="font-semibold text-accent dark:text-[#FFE600]">{categoryList.length}</span> <span className="text-muted">categories</span></div>
+                  <div className="text-sm"><span className="font-semibold">{Object.values(imageCountByCategory).reduce((a, b) => a + b, 0)}</span> <span className="text-muted">total images</span></div>
+                </div>
+                <Button variant="default" size="sm" onClick={() => setShowCategoryForm(true)}>
+                  + Add Category
+                </Button>
               </div>
 
+              {/* Add form */}
               <AnimatePresence>
                 {showCategoryForm && (
                   <motion.div
@@ -496,22 +524,51 @@ export default function DashboardPage() {
                     className="mb-6 overflow-hidden"
                   >
                     <div className="p-4 rounded-xl bg-accent/5 dark:bg-white/5 border border-panel-border space-y-3">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs font-medium text-muted mb-1">Slug</label>
-                          <input type="text" value={newCategory.id} onChange={(e) => setNewCategory((p) => ({ ...p, id: e.target.value }))} placeholder={slugify(newCategory.name.en || '') || 'unique-id'} className="input text-sm" />
+                          <label className="block text-xs font-medium text-muted mb-1">Slug (unique ID)</label>
+                          <input
+                            type="text"
+                            value={newCategory.id}
+                            onChange={(e) => setNewCategory((p) => ({ ...p, id: e.target.value }))}
+                            placeholder={slugify(newCategory.name.en || '') || 'unique-id'}
+                            className="input text-sm"
+                          />
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-muted mb-1">Emoji</label>
-                          <input type="text" value={newCategory.emoji} onChange={(e) => setNewCategory((p) => ({ ...p, emoji: e.target.value }))} placeholder="🎨" className="input text-sm text-center" maxLength={4} />
+                          <input
+                            type="text"
+                            value={newCategory.emoji}
+                            onChange={(e) => setNewCategory((p) => ({ ...p, emoji: e.target.value }))}
+                            placeholder="🎨"
+                            className="input text-sm text-center"
+                            maxLength={4}
+                          />
                         </div>
                       </div>
-                      {LANGUAGES.map((lang) => (
-                        <input key={lang.key} type="text" value={newCategory.name[lang.key]} onChange={(e) => setNewCategory((p) => ({ ...p, name: { ...p.name, [lang.key]: e.target.value } }))} placeholder={`Name (${lang.key})`} className="input text-sm" />
-                      ))}
+                      <div>
+                        <label className="block text-xs font-medium text-muted mb-1">Names (EN, ES, PT)</label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {LANGUAGES.map((lang) => (
+                            <div key={lang.key} className="flex items-center gap-1.5">
+                              <span className="text-xs flex-shrink-0">{lang.flag}</span>
+                              <input
+                                type="text"
+                                value={newCategory.name[lang.key]}
+                                onChange={(e) => setNewCategory((p) => ({ ...p, name: { ...p.name, [lang.key]: e.target.value } }))}
+                                placeholder={lang.key}
+                                className="input text-xs py-1.5"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                       <div className="flex gap-2 pt-1">
-                        <button onClick={addCategory} className="btn btn-sm">Add</button>
-                        <button onClick={() => { setShowCategoryForm(false); setNewCategory({ id: '', name: { en: '', es: '', pt: '' }, emoji: '📁' }); }} className="btn btn-sm btn-secondary">Cancel</button>
+                        <Button size="sm" onClick={addCategory}>Add</Button>
+                        <Button size="sm" variant="ghost" onClick={() => { setShowCategoryForm(false); setNewCategory({ id: '', name: { en: '', es: '', pt: '' }, emoji: '📁' }); }}>
+                          Cancel
+                        </Button>
                       </div>
                     </div>
                   </motion.div>
@@ -519,23 +576,122 @@ export default function DashboardPage() {
               </AnimatePresence>
 
               {categoryList.length === 0 ? (
-                <p className="text-sm text-muted py-8 text-center bg-accent/5 dark:bg-white/5 rounded-xl border border-dashed border-panel-border">No categories yet.</p>
+                <p className="text-sm text-muted py-8 text-center bg-accent/5 dark:bg-white/5 rounded-xl border border-dashed border-panel-border">
+                  No categories yet. Create your first one.
+                </p>
               ) : (
-                <div className="space-y-1.5">
-                  {categoryList.map((cat, idx) => (
-                    <div key={cat.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-accent/5 dark:bg-white/5 border border-panel-border group">
-                      <div className="flex gap-0.5">
-                        <button onClick={() => moveCategory(cat.id, -1)} disabled={idx === 0} className="w-5 h-5 flex items-center justify-center rounded text-muted hover:text-accent disabled:opacity-20 text-xs">↑</button>
-                        <button onClick={() => moveCategory(cat.id, 1)} disabled={idx === categoryList.length - 1} className="w-5 h-5 flex items-center justify-center rounded text-muted hover:text-accent disabled:opacity-20 text-xs">↓</button>
-                      </div>
-                      <span className="text-lg flex-shrink-0 w-7 text-center">{cat.emoji || '📁'}</span>
-                      {LANGUAGES.map((lang) => (
-                        <input key={lang.key} value={cat.name?.[lang.key] || ''} onChange={(e) => updateCategoryName(cat.id, lang.key, e.target.value)} className="input text-xs py-1 px-2 min-w-0 flex-1" placeholder={lang.key} />
-                      ))}
-                      <span className="text-[10px] text-muted hidden sm:block flex-shrink-0 w-14 text-right">{cat.id}</span>
-                      <button onClick={() => removeCategory(cat.id)} className="w-6 h-6 flex items-center justify-center rounded text-red-400 hover:text-red-500 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">✕</button>
-                    </div>
-                  ))}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {categoryList.map((cat, idx) => {
+                    const count = imageCountByCategory[cat.id] || 0;
+                    const isExpanded = editingCat === cat.id;
+                    return (
+                      <motion.div
+                        key={cat.id}
+                        layout
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={cn(
+                          "rounded-xl border transition-all duration-200",
+                          isExpanded
+                            ? "border-accent/30 dark:border-white/20 bg-accent/5 dark:bg-white/5"
+                            : "border-panel-border bg-white/40 dark:bg-white/[0.03] hover:border-accent/20 dark:hover:border-white/15"
+                        )}
+                      >
+                        {/* Header */}
+                        <div className="flex items-center gap-2 p-3">
+                          <div className="flex gap-0.5 flex-shrink-0">
+                            <button
+                              onClick={() => moveCategory(cat.id, -1)}
+                              disabled={idx === 0}
+                              className="w-5 h-5 flex items-center justify-center rounded text-muted hover:text-accent disabled:opacity-20 text-xs"
+                            >↑</button>
+                            <button
+                              onClick={() => moveCategory(cat.id, 1)}
+                              disabled={idx === categoryList.length - 1}
+                              className="w-5 h-5 flex items-center justify-center rounded text-muted hover:text-accent disabled:opacity-20 text-xs"
+                            >↓</button>
+                          </div>
+                          <span className="text-xl flex-shrink-0 w-8 text-center">{cat.emoji || '📁'}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">
+                              {cat.name?.en || cat.id}
+                            </p>
+                            <p className="text-[10px] text-muted truncate">slug: {cat.id}</p>
+                          </div>
+                          {/* Image count badge */}
+                          <div className={cn(
+                            "flex-shrink-0 text-xs font-medium px-2 py-0.5 rounded-full",
+                            count > 0
+                              ? 'bg-accent/10 dark:bg-white/10 text-accent dark:text-white'
+                              : 'text-muted bg-transparent'
+                          )}>
+                            {count} img
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            onClick={() => setEditingCat(isExpanded ? null : cat.id)}
+                            className="flex-shrink-0"
+                          >
+                            {isExpanded ? '▲' : '▼'}
+                          </Button>
+                          <button
+                            onClick={() => removeCategory(cat.id)}
+                            className="w-6 h-6 flex items-center justify-center rounded text-red-400 hover:text-red-500 hover:bg-red-500/10 flex-shrink-0 text-xs"
+                          >✕</button>
+                        </div>
+
+                        {/* Expanded edit area */}
+                        <AnimatePresence>
+                          {isExpanded && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="px-3 pb-3 pt-0 space-y-2 border-t border-panel-border/50 mt-1">
+                                <div className="pt-2">
+                                  <label className="block text-[10px] font-medium text-muted mb-1">Slug</label>
+                                  <input
+                                    type="text"
+                                    value={cat.id}
+                                    onChange={(e) => updateCategoryField(cat.id, 'id', slugify(e.target.value))}
+                                    className="input text-xs py-1.5 w-full"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] font-medium text-muted mb-1">Emoji</label>
+                                  <input
+                                    type="text"
+                                    value={cat.emoji || ''}
+                                    onChange={(e) => updateCategoryField(cat.id, 'emoji', e.target.value)}
+                                    className="input text-xs py-1.5 text-center w-16"
+                                    maxLength={4}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] font-medium text-muted mb-1">Names</label>
+                                  {LANGUAGES.map((lang) => (
+                                    <div key={lang.key} className="flex items-center gap-1.5 mb-1 last:mb-0">
+                                      <span className="text-[10px] w-6 flex-shrink-0">{lang.flag}</span>
+                                      <input
+                                        type="text"
+                                        value={cat.name?.[lang.key] || ''}
+                                        onChange={(e) => updateCategoryName(cat.id, lang.key, e.target.value)}
+                                        className="input text-xs py-1 flex-1"
+                                        placeholder={lang.key}
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </motion.div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -603,7 +759,12 @@ export default function DashboardPage() {
                       {images.map((img) => {
                         const selected = (localSettings.aboutMe?.imageIds || []).includes(img._id);
                         return (
-                          <button key={img._id} onClick={() => toggleSectionImage('aboutMe', img._id)} className={`flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden ring-2 transition-all ${selected ? 'ring-[#FFE600] ring-offset-1 ring-offset-[var(--bg-app)] scale-105' : 'ring-panel-border hover:ring-accent/50 opacity-60 hover:opacity-100'}`}>
+                          <button key={img._id} onClick={() => toggleSectionImage('aboutMe', img._id)} className={cn(
+                            "flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden ring-2 transition-all",
+                            selected
+                              ? 'ring-[#FFE600] ring-offset-1 ring-offset-[var(--bg-app)] scale-105'
+                              : 'ring-panel-border hover:ring-accent/50 opacity-60 hover:opacity-100'
+                          )}>
                             <img src={img.url} alt="" className="w-full h-full object-cover" />
                             {selected && <div className="absolute inset-0 bg-[#FFE600]/20 flex items-center justify-center"><span className="text-xs font-bold text-[#111827]">✓</span></div>}
                           </button>
@@ -675,15 +836,19 @@ export default function DashboardPage() {
               {tab === 'hero' && `${orderedHero.length} images selected`}
               {tab === 'categories' && `${categoryList.length} categories`}
             </span>
-            <button
+            <Button
               onClick={handleSave}
               disabled={updateSettings.isPending}
-              className="btn px-8 disabled:opacity-50"
+              size="lg"
+              className="px-8"
             >
               {updateSettings.isPending ? (
-                <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" /> Saving...</span>
+                <span className="flex items-center gap-2">
+                  <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  Saving...
+                </span>
               ) : '💾 Save Changes'}
-            </button>
+            </Button>
           </div>
         </div>
       </motion.div>

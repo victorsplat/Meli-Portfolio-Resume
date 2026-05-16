@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
@@ -42,6 +42,15 @@ export default function GalleryAdmin() {
   const passwordRef = useRef(null);
 
   const categories = settings?.categories?.items || [];
+
+  const imageCountByCategory = useMemo(() => {
+    const counts = {};
+    for (const img of images) {
+      const cat = img.category || 'others';
+      counts[cat] = (counts[cat] || 0) + 1;
+    }
+    return counts;
+  }, [images]);
 
   useEffect(() => {
     if (ready && !token && passwordRef.current) {
@@ -331,11 +340,14 @@ export default function GalleryAdmin() {
                   <label className="block text-xs font-medium text-muted mb-1.5">{t('galleryAdmin.category')}</label>
                   <select value={category} onChange={(e) => setCategory(e.target.value)} className="input text-sm">
                     {categories.length === 0 && <option value="">No categories</option>}
-                    {categories.map((cat) => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.emoji} {cat.name?.en || cat.id}
-                      </option>
-                    ))}
+                    {categories.map((cat) => {
+                      const count = imageCountByCategory[cat.id] || 0;
+                      return (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.emoji} {cat.name?.en || cat.id} ({count})
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
                 <label className="flex items-center gap-3 cursor-pointer pt-1">
