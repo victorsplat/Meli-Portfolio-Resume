@@ -7,7 +7,7 @@ const DotPattern = ({ style, isHovered, mouseX, mouseY }) => {
 
   return (
     <motion.svg
-      className="absolute inset-0 w-full h-full z-0 pointer-events-none [mask-image:linear-gradient(to_bottom,black_0%,black_85%,transparent_100%)]"
+      className="absolute inset-0 w-full h-full z-0 pointer-events-none [mask-image:linear-gradient(to_bottom,black_0%,black_92%,transparent_100%)]"
       aria-hidden="true"
       style={style}
     >

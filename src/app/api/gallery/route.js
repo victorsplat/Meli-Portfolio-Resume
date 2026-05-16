@@ -1,9 +1,25 @@
 import getClient from '@/lib/mongodb';
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
-import { sanitize, validateImage } from '@/lib/validate';
+import { sanitize } from '@/lib/validate';
 import { rateLimit, getClientIp } from '@/lib/rateLimit';
-import sharp from 'sharp';
+
+async function processWithSharp(image) {
+  try {
+    const sharp = (await import('sharp')).default;
+    const base64Data = image.split(',')[1];
+    if (!base64Data) return image;
+    const buffer = Buffer.from(base64Data, 'base64');
+    const webpBuffer = await sharp(buffer)
+      .resize(1200, 1200, { fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 80 })
+      .toBuffer();
+    return `data:image/webp;base64,${webpBuffer.toString('base64')}`;
+  } catch (err) {
+    console.error('Sharp processing failed, using original:', err);
+    return image;
+  }
+}
 
 export async function GET(_request) {
   try {
@@ -13,7 +29,7 @@ export async function GET(_request) {
     const images = await collection.find({}).sort({ createdAt: -1 }).toArray();
     return NextResponse.json(images.map((doc) => ({
       ...doc,
-      url: typeof doc.url === 'string' && doc.url.startsWith('data:') ? doc.url : doc.url,
+      url: typeof doc.url === 'string' ? doc.url : doc.url,
       _id: doc._id.toString(),
       category: doc.category || 'others',
       featured: doc.featured === true
@@ -39,33 +55,37 @@ export async function POST(request) {
 
   try {
     const body = await request.json();
-    const { image, title, description, category, featured } = body;
+    const { image, url, title, description, category, featured } = body;
 
-    if (!image) {
-      return NextResponse.json({ error: 'Image is required' }, { status: 400 });
-    }
-
-    const validation = validateImage(image);
-    if (!validation.valid) {
-      return NextResponse.json({ error: validation.error }, { status: 400 });
+    if (!image && !url) {
+      return NextResponse.json({ error: 'Image data or URL is required' }, { status: 400 });
     }
 
     const validCategories = ['design', 'aboutMe', 'skate', 'drinks', 'food', 'others'];
     const safeCategory = validCategories.includes(category) ? category : 'others';
+    let finalUrl = url || '';
 
-    let processedImage = image;
-    try {
+    if (image) {
       const base64Data = image.split(',')[1];
-      if (base64Data) {
-        const buffer = Buffer.from(base64Data, 'base64');
-        const webpBuffer = await sharp(buffer)
-          .resize(1200, 1200, { fit: 'inside', withoutEnlargement: true })
-          .webp({ quality: 80 })
-          .toBuffer();
-        processedImage = `data:image/webp;base64,${webpBuffer.toString('base64')}`;
+      if (!base64Data) {
+        return NextResponse.json({ error: 'Invalid image data' }, { status: 400 });
       }
-    } catch (sharpError) {
-      console.error('Sharp processing failed, using original image:', sharpError);
+      const buffer = Buffer.from(base64Data, 'base64');
+
+      if (process.env.GALLERY_RW_TOKEN_READ_WRITE_TOKEN) {
+        try {
+          const { put } = await import('@vercel/blob');
+          const ext = image.match(/image\/(\w+)/)?.[1] || 'jpeg';
+          const filename = `gallery/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+          const blob = await put(filename, buffer, { access: 'public' });
+          finalUrl = blob.url;
+        } catch (blobError) {
+          console.error('Blob upload failed, falling back to base64 with Sharp:', blobError);
+          finalUrl = await processWithSharp(image);
+        }
+      } else {
+        finalUrl = await processWithSharp(image);
+      }
     }
 
     const client = await getClient();
@@ -73,7 +93,7 @@ export async function POST(request) {
     const collection = db.collection('images');
 
     const result = await collection.insertOne({
-      url: processedImage,
+      url: finalUrl,
       title: sanitize(title || ''),
       description: sanitize(description || ''),
       category: safeCategory,
@@ -81,7 +101,7 @@ export async function POST(request) {
       createdAt: new Date()
     });
 
-    return NextResponse.json({ success: true, id: result.insertedId });
+    return NextResponse.json({ success: true, id: result.insertedId, url: finalUrl });
   } catch (error) {
     console.error('Error adding image:', error);
     const message = error instanceof Error ? `${error.name}: ${error.message}` : 'Failed to add image';
@@ -114,6 +134,18 @@ export async function DELETE(request) {
     const collection = db.collection('images');
 
     const { ObjectId } = await import('mongodb');
+
+    const existing = await collection.findOne({ _id: new ObjectId(id) });
+
+    if (existing?.url && existing.url.startsWith('https://') && process.env.GALLERY_RW_TOKEN_READ_WRITE_TOKEN) {
+      try {
+        const { del } = await import('@vercel/blob');
+        await del(existing.url);
+      } catch (blobError) {
+        console.error('Failed to delete from Blob:', blobError);
+      }
+    }
+
     await collection.deleteOne({ _id: new ObjectId(id) });
 
     return NextResponse.json({ success: true });

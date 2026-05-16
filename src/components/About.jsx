@@ -34,6 +34,7 @@ const About = ({ onHover }) => {
           <p>{t('about.p1')}</p>
           <p style={{ marginTop: '1rem' }}>{t('about.p2')}</p>
           <p style={{ marginTop: '1rem' }}>{t('about.p3')}</p>
+          <p style={{ marginTop: '1rem' }}>{t('about.p4')}</p>
         </motion.div>
 
         <motion.div

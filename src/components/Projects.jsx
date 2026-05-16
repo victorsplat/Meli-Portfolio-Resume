@@ -30,8 +30,8 @@ const Projects = () => {
             viewport={{ once: true, amount: 0.3 }}
             whileHover={{ scale: 1.03, y: -5 }}
           >
-            <h3 className="text-xl mb-6 text-center dark:text-white" style={{ color: '#2D3277' }}>{project.title}</h3>
-            <p>{project.description}</p>
+            <h3 className="text-xl mb-6 text-center text-[var(--text-main)] dark:text-white">{project.title}</h3>
+            <p className="text-gray-500 dark:text-gray-400">{project.description}</p>
             <Link href={project.link} className="btn btn-sm mt-4">
               {t('projects.explore')}
             </Link>

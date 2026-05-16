@@ -15,6 +15,7 @@ const SECTIONS = [
   {
     id: 'hero',
     title: 'Hero Section',
+    description: 'Large carousel at the top of the gallery page',
     fields: [
       { key: 'title', label: 'Title', type: 'text' },
       { key: 'subtitle', label: 'Subtitle', type: 'text' },
@@ -23,6 +24,7 @@ const SECTIONS = [
   {
     id: 'aboutMe',
     title: 'About Me Section',
+    description: 'Story card below the hero',
     fields: [
       { key: 'title', label: 'Title', type: 'text' },
       { key: 'text', label: 'Body Text', type: 'textarea' },
@@ -31,6 +33,7 @@ const SECTIONS = [
   {
     id: 'footer',
     title: 'Footer Section',
+    description: 'Footer text at the bottom of the gallery',
     fields: [
       { key: 'text', label: 'Footer Text', type: 'text' },
     ],
@@ -58,6 +61,7 @@ export default function DashboardPage() {
   const [passwordInput, setPasswordInput] = useState('');
   const [authError, setAuthError] = useState('');
   const [settings, setSettings] = useState(null);
+  const [allImages, setAllImages] = useState([]);
   const [settingsError, setSettingsError] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
@@ -69,6 +73,7 @@ export default function DashboardPage() {
     if (token) {
       setAuthenticated(true);
       fetchSettings();
+      fetchImages();
     }
   }, []);
 
@@ -81,7 +86,17 @@ export default function DashboardPage() {
       setSettings(data);
     } catch (error) {
       console.error('Error fetching settings:', error);
-      setSettingsError('Failed to load settings. Make sure you are connected to the internet and the server is running.');
+      setSettingsError('Failed to load settings.');
+    }
+  }
+
+  async function fetchImages() {
+    try {
+      const res = await fetch('/api/gallery');
+      const data = await res.json();
+      if (!data.error) setAllImages(data);
+    } catch (error) {
+      console.error('Error fetching images:', error);
     }
   }
 
@@ -108,6 +123,7 @@ export default function DashboardPage() {
     setAuthenticated(true);
     setPasswordInput('');
     fetchSettings();
+    fetchImages();
   }
 
   function handleLogout() {
@@ -127,6 +143,21 @@ export default function DashboardPage() {
         },
       },
     }));
+  }
+
+  function toggleSectionImage(sectionId, imageId) {
+    setSettings(prev => {
+      const ids = prev?.[sectionId]?.imageIds || [];
+      return {
+        ...prev,
+        [sectionId]: {
+          ...prev[sectionId],
+          imageIds: ids.includes(imageId)
+            ? ids.filter(id => id !== imageId)
+            : [...ids, imageId],
+        },
+      };
+    });
   }
 
   async function handleTranslate(sectionId, fieldKey) {
@@ -174,6 +205,11 @@ export default function DashboardPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  function getSelectedImages(sectionId) {
+    const ids = settings?.[sectionId]?.imageIds || [];
+    return allImages.filter(img => ids.includes(img._id));
   }
 
   if (!authenticated) {
@@ -236,7 +272,7 @@ export default function DashboardPage() {
           className="text-center mb-12"
         >
           <h1 className="title text-4xl md:text-5xl">📋 Gallery Dashboard</h1>
-          <p className="text-muted mb-6">Edit gallery page content in all 3 languages</p>
+          <p className="text-muted mb-6">Edit gallery page content and organize images in all 3 languages</p>
           <div className="flex justify-center gap-4">
             <Link href="/galleryAdmin" className="btn btn-sm">← Image Manager</Link>
             <Link href="/gallery" className="btn btn-sm btn-secondary">View Gallery</Link>
@@ -252,12 +288,16 @@ export default function DashboardPage() {
               animate={{ opacity: 1, y: 0 }}
               className="card"
             >
-              <h2 className="text-xl font-bold text-accent dark:text-[#FFE600] mb-6">
-                {section.title}
-              </h2>
+              <div className="flex items-center gap-3 mb-2">
+                <h2 className="text-xl font-bold text-accent dark:text-[#FFE600]">{section.title}</h2>
+                {section.description && (
+                  <span className="text-xs text-muted hidden sm:block">{section.description}</span>
+                )}
+              </div>
 
+              {/* Text Fields */}
               {section.fields.map((field) => (
-                <div key={field.key} className="mb-6 last:mb-0">
+                <div key={field.key} className="mb-5 last:mb-0">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {LANGUAGES.map((lang) => {
                       const value = settings[section.id]?.[field.key]?.[lang.key] || '';
@@ -285,27 +325,82 @@ export default function DashboardPage() {
                       );
                     })}
                   </div>
-
-                  {field.key !== 'text' && (
-                    <button
-                      onClick={() => handleTranslate(section.id, field.key)}
-                      disabled={translating[`${section.id}.${field.key}`] || !settings[section.id]?.[field.key]?.en?.trim()}
-                      className="mt-2 text-xs text-accent dark:text-[#FFE600] hover:underline disabled:opacity-30 disabled:no-underline"
-                    >
-                      {translating[`${section.id}.${field.key}`] ? '🔄 Translating...' : '🤖 Auto-translate EN → ES, PT'}
-                    </button>
-                  )}
+                  <button
+                    onClick={() => handleTranslate(section.id, field.key)}
+                    disabled={translating[`${section.id}.${field.key}`] || !settings[section.id]?.[field.key]?.en?.trim()}
+                    className="mt-2 text-xs text-accent dark:text-[#FFE600] hover:underline disabled:opacity-30 disabled:no-underline"
+                  >
+                    {translating[`${section.id}.${field.key}`] ? '🔄 Translating...' : '🤖 Auto-translate EN → ES, PT'}
+                  </button>
                 </div>
               ))}
+
+              {/* Image Selector */}
+              <div className="mt-6 pt-4 border-t border-panel-border">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-accent dark:text-white">Section Images</h3>
+                  <span className="text-xs text-muted">
+                    {getSelectedImages(section.id).length} selected
+                  </span>
+                </div>
+
+                {allImages.length === 0 ? (
+                  <p className="text-xs text-muted">No images available. Upload images in the Image Manager first.</p>
+                ) : (
+                  <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
+                    {allImages.map((img) => {
+                      const selected = (settings[section.id]?.imageIds || []).includes(img._id);
+                      return (
+                        <button
+                          key={img._id}
+                          onClick={() => toggleSectionImage(section.id, img._id)}
+                          className={`flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden ring-2 transition-all duration-200 ${
+                            selected
+                              ? 'ring-[#FFE600] ring-offset-2 ring-offset-[var(--bg-app)] scale-105'
+                              : 'ring-panel-border hover:ring-accent/50 opacity-60 hover:opacity-100'
+                          }`}
+                        >
+                          <img
+                            src={img.url}
+                            alt={img.title || ''}
+                            className="w-full h-full object-cover"
+                          />
+                          {selected && (
+                            <div className="absolute inset-0 bg-[#FFE600]/20 flex items-center justify-center">
+                              <span className="text-xs font-bold text-[#111827]">✓</span>
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Selected Images Preview */}
+                {getSelectedImages(section.id).length > 0 && (
+                  <div className="mt-3 flex gap-2 flex-wrap">
+                    {getSelectedImages(section.id).map((img) => (
+                      <div key={img._id} className="flex items-center gap-1.5 bg-accent/5 dark:bg-white/5 px-2 py-1 rounded-lg text-xs text-muted">
+                        <div className="w-5 h-5 rounded overflow-hidden flex-shrink-0">
+                          <img src={img.url} alt="" className="w-full h-full object-cover" />
+                        </div>
+                        <span className="truncate max-w-[120px]">{img.title || 'Untitled'}</span>
+                        <button
+                          onClick={() => toggleSectionImage(section.id, img._id)}
+                          className="ml-0.5 text-red-400 hover:text-red-500"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </motion.div>
           ))}
         </div>
 
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-center mt-8"
-        >
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center mt-8">
           <button
             onClick={handleSave}
             disabled={saving}

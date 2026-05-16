@@ -4,17 +4,23 @@ import { requireAdmin } from '@/lib/auth';
 import { sanitize } from '@/lib/validate';
 import { rateLimit, getClientIp } from '@/lib/rateLimit';
 
+const TEXT_FIELDS = ['title', 'subtitle', 'text'];
+const ARRAY_FIELDS = ['imageIds'];
+
 const DEFAULT_SETTINGS = {
   hero: {
     title: { en: '', es: '', pt: '' },
     subtitle: { en: '', es: '', pt: '' },
+    imageIds: [],
   },
   aboutMe: {
     title: { en: '', es: '', pt: '' },
     text: { en: '', es: '', pt: '' },
+    imageIds: [],
   },
   footer: {
     text: { en: '', es: '', pt: '' },
+    imageIds: [],
   },
 };
 
@@ -25,12 +31,17 @@ function sanitizeSettings(body) {
     const src = body[section] || {};
     settings[section] = {};
     for (const field of Object.keys(DEFAULT_SETTINGS[section])) {
-      const val = src[field] || {};
-      settings[section][field] = {
-        en: sanitize(val.en || ''),
-        es: sanitize(val.es || ''),
-        pt: sanitize(val.pt || ''),
-      };
+      if (TEXT_FIELDS.includes(field)) {
+        const val = src[field] || {};
+        settings[section][field] = {
+          en: sanitize(val.en || ''),
+          es: sanitize(val.es || ''),
+          pt: sanitize(val.pt || ''),
+        };
+      } else if (ARRAY_FIELDS.includes(field)) {
+        const arr = Array.isArray(src[field]) ? src[field].filter(id => typeof id === 'string') : [];
+        settings[section][field] = arr;
+      }
     }
   }
 

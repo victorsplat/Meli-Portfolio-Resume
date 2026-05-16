@@ -1,13 +1,11 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
 import { usePageTitle } from '@/lib/usePageTitle';
 import GalleryLightbox from '@/components/GalleryLightbox';
-
-const aspectCycle = ['aspect-square', 'aspect-[4/3]', 'aspect-[3/4]', 'aspect-[16/9]', 'aspect-square', 'aspect-[4/3]'];
 
 const categoryMeta = {
   design: { emoji: '🎨', en: 'Design', es: 'Diseño', pt: 'Design' },
@@ -18,6 +16,8 @@ const categoryMeta = {
   others: { emoji: '✨', en: 'Others', es: 'Otros', pt: 'Outros' },
 };
 
+const HERO_INTERVAL = 5000;
+
 export default function GalleryPage() {
   const { t, lang } = useI18n();
   usePageTitle('gallery.title');
@@ -26,7 +26,8 @@ export default function GalleryPage() {
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
   const [activeCategory, setActiveCategory] = useState('all');
-  const [heroLoaded, setHeroLoaded] = useState(true);
+  const [heroIndex, setHeroIndex] = useState(0);
+  const heroIntervalRef = useRef(null);
 
   function getSetting(path) {
     if (!settings) return '';
@@ -39,6 +40,27 @@ export default function GalleryPage() {
     if (typeof val === 'object' && val !== null) return val[lang] || val.en || '';
     return val || '';
   }
+
+  const heroImageIds = useMemo(() => settings?.hero?.imageIds || [], [settings]);
+
+  const heroImages = useMemo(() => {
+    if (heroImageIds.length > 0) {
+      const mapped = heroImageIds.map(id => images.find(img => img._id === id)).filter(Boolean);
+      if (mapped.length > 0) return mapped;
+    }
+    const featured = images.filter(img => img.featured);
+    return featured.length > 0 ? featured : images.slice(0, 5);
+  }, [images, heroImageIds]);
+
+  const aboutImages = useMemo(() => {
+    const ids = settings?.aboutMe?.imageIds || [];
+    return ids.map(id => images.find(img => img._id === id)).filter(Boolean);
+  }, [images, settings]);
+
+  const footerImages = useMemo(() => {
+    const ids = settings?.footer?.imageIds || [];
+    return ids.map(id => images.find(img => img._id === id)).filter(Boolean);
+  }, [images, settings]);
 
   useEffect(() => {
     async function fetchData() {
@@ -60,9 +82,23 @@ export default function GalleryPage() {
     fetchData();
   }, []);
 
-  const featuredImage = useMemo(() => {
-    return images.find(img => img.featured) || images[0] || null;
-  }, [images]);
+  useEffect(() => {
+    if (heroImages.length <= 1) return;
+    heroIntervalRef.current = setInterval(() => {
+      setHeroIndex(prev => (prev + 1) % heroImages.length);
+    }, HERO_INTERVAL);
+    return () => clearInterval(heroIntervalRef.current);
+  }, [heroImages.length]);
+
+  const heroNext = useCallback(() => {
+    clearInterval(heroIntervalRef.current);
+    setHeroIndex(prev => (prev + 1) % heroImages.length);
+  }, [heroImages.length]);
+
+  const heroPrev = useCallback(() => {
+    clearInterval(heroIntervalRef.current);
+    setHeroIndex(prev => (prev - 1 + heroImages.length) % heroImages.length);
+  }, [heroImages.length]);
 
   const categories = useMemo(() => {
     return [...new Set(images.map(img => img.category))].sort();
@@ -74,15 +110,18 @@ export default function GalleryPage() {
     featured: images.filter(img => img.featured).length,
   }), [images, categories]);
 
+  const filteredImages = useMemo(() => {
+    return activeCategory === 'all' ? images : images.filter(img => img.category === activeCategory);
+  }, [images, activeCategory]);
+
   const grouped = useMemo(() => {
-    const source = activeCategory === 'all' ? images : images.filter(img => img.category === activeCategory);
     const groups = {};
-    for (const img of source) {
+    for (const img of filteredImages) {
       if (!groups[img.category]) groups[img.category] = [];
       groups[img.category].push(img);
     }
     return groups;
-  }, [images, activeCategory]);
+  }, [filteredImages]);
 
   function getCategoryLabel(cat) {
     const meta = categoryMeta[cat];
@@ -92,88 +131,122 @@ export default function GalleryPage() {
     return meta.en;
   }
 
-  function getGridClass(index) {
-    return aspectCycle[index % aspectCycle.length];
-  }
+  const currentHero = heroImages[heroIndex];
 
   return (
     <div className="min-h-screen bg-bg-app">
-      {/* MELI Hero */}
-      <section className="relative overflow-hidden bg-[#121b29]">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#121b29] via-[#1a2744] to-[#0f1624]" />
-        <div className="absolute inset-0 opacity-[0.04]" style={{
-          backgroundImage: 'radial-gradient(circle at 25% 25%, #FFE600 1px, transparent 1px), radial-gradient(circle at 75% 75%, #FFE600 1px, transparent 1px)',
-          backgroundSize: '60px 60px',
-        }} />
+      {/* ======================== HERO CAROUSEL ======================== */}
+      <section className="relative h-[60vh] md:h-[80vh] min-h-[400px] md:min-h-[500px] overflow-hidden bg-[#121b29]">
+        {/* Background gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#121b29] via-[#1a2744] to-[#0f1624] z-0" />
 
-        {!loading && featuredImage && (
-          <div className="relative">
-            <div className="absolute inset-0 overflow-hidden">
-              <img
-                src={featuredImage.url}
+        {!loading && heroImages.length > 0 && (
+          <div className="absolute inset-0 z-0">
+            <AnimatePresence mode="wait">
+              <motion.img
+                key={heroIndex}
+                src={currentHero.url}
                 alt=""
-                className={`w-full h-full object-cover transition-all duration-1000 ${heroLoaded ? 'opacity-20 scale-100' : 'opacity-0 scale-110'}`}
-                onLoad={() => setHeroLoaded(true)}
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-[#121b29] via-[#121b29]/80 to-transparent" />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#121b29] via-transparent to-transparent" />
-            </div>
-
-            <div className="relative container py-20 md:py-32">
-              <motion.div
-                initial={{ opacity: 0, y: 40 }}
-                animate={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, scale: 1.1 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0 }}
                 transition={{ duration: 0.8 }}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            </AnimatePresence>
+            {/* Overlay gradients */}
+            <div className="absolute inset-0 bg-gradient-to-r from-[#121b29] via-[#121b29]/70 to-[#121b29]/30" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#121b29] via-transparent to-black/30" />
+          </div>
+        )}
+
+        {/* Hero Content */}
+        <div className="relative z-10 h-full flex items-center">
+          <div className="container w-full">
+            {!loading && heroImages.length > 0 && (
+              <motion.div
+                key={heroIndex}
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
                 className="max-w-2xl"
               >
-                {featuredImage.featured && (
+                {currentHero.featured && (
                   <span className="inline-block bg-[#FFE600] text-[#111827] text-xs font-bold px-3 py-1 rounded-full mb-4">
                     ★ {t('gallery.featuredLabel')}
                   </span>
                 )}
-                <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 leading-tight">
-                  {featuredImage.title || getSetting('hero.title') || t('gallery.title')}
+                <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-4 leading-tight">
+                  {getSetting('hero.title') || currentHero.title || t('gallery.title')}
                 </h1>
-                {(featuredImage.description || getSetting('hero.subtitle')) && (
+                {(getSetting('hero.subtitle') || currentHero.description) && (
                   <p className="text-gray-300 text-lg md:text-xl max-w-xl leading-relaxed">
-                    {featuredImage.description || getSetting('hero.subtitle')}
+                    {getSetting('hero.subtitle') || currentHero.description}
                   </p>
                 )}
                 <div className="flex items-center gap-3 mt-6">
                   <span className="flex items-center gap-1.5 text-sm text-gray-400">
-                    {categoryMeta[featuredImage.category]?.emoji} {getCategoryLabel(featuredImage.category)}
+                    {categoryMeta[currentHero.category]?.emoji} {getCategoryLabel(currentHero.category)}
                   </span>
                 </div>
               </motion.div>
-            </div>
-          </div>
-        )}
+            )}
 
-        {!loading && !featuredImage && (
-          <div className="container py-20 md:py-32 text-center">
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-4xl md:text-6xl font-bold text-white mb-4"
+            {!loading && heroImages.length === 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">{t('gallery.title')}</h1>
+                <p className="text-gray-400 text-lg">{t('gallery.subtitle')}</p>
+              </motion.div>
+            )}
+
+            {loading && (
+              <div className="max-w-xl">
+                <div className="h-12 w-3/4 skeleton bg-white/10 mb-4 rounded-lg" />
+                <div className="h-6 w-1/2 skeleton bg-white/10 rounded-lg" />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Hero Nav Arrows */}
+        {!loading && heroImages.length > 1 && (
+          <>
+            <button
+              onClick={heroPrev}
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/20 transition-all text-xl"
             >
-              {t('gallery.title')}
-            </motion.h1>
-            <p className="text-gray-400 text-lg">{t('gallery.subtitle')}</p>
-          </div>
+              ←
+            </button>
+            <button
+              onClick={heroNext}
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/20 transition-all text-xl"
+            >
+              →
+            </button>
+          </>
         )}
 
-        {loading && (
-          <div className="container py-20 md:py-32">
-            <div className="max-w-xl">
-              <div className="h-12 w-3/4 skeleton bg-white/10 mb-4 rounded-lg" />
-              <div className="h-6 w-1/2 skeleton bg-white/10 rounded-lg" />
-            </div>
+        {/* Hero Dots */}
+        {!loading && heroImages.length > 1 && (
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+            {heroImages.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => { clearInterval(heroIntervalRef.current); setHeroIndex(i); }}
+                className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                  i === heroIndex ? 'bg-[#FFE600] w-6' : 'bg-white/40 hover:bg-white/60'
+                }`}
+              />
+            ))}
           </div>
         )}
       </section>
 
       <div className="container pb-12">
-        {/* Stats Bar */}
+        {/* ======================== STATS BAR ======================== */}
         {!loading && images.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -194,36 +267,49 @@ export default function GalleryPage() {
           </motion.div>
         )}
 
-        {/* About Me Section */}
+        {/* ======================== ABOUT ME ======================== */}
         {!loading && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
-            className="card-glass max-w-3xl mx-auto mb-12 text-center"
+            className="card-glass max-w-4xl mx-auto mb-12 overflow-hidden"
           >
-            <h2 className="text-2xl font-bold text-accent dark:text-[#FFE600] mb-4">
-              {getSetting('aboutMe.title') || t('gallery.aboutTitle')}
-            </h2>
-            <p className="text-muted leading-relaxed whitespace-pre-line">
-              {getSetting('aboutMe.text') || t('gallery.aboutText')}
-            </p>
+            {aboutImages.length > 0 && (
+              <div className="flex gap-3 overflow-x-auto pb-2 mb-4 scrollbar-thin">
+                {aboutImages.map(img => (
+                  <img
+                    key={img._id}
+                    src={img.url}
+                    alt={img.title || ''}
+                    className="h-32 md:h-40 rounded-xl object-cover flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => setSelectedImage(img)}
+                  />
+                ))}
+              </div>
+            )}
+            <div className={aboutImages.length > 0 ? '' : ''}>
+              <h2 className="text-2xl font-bold text-accent dark:text-[#FFE600] mb-4 text-center">
+                {getSetting('aboutMe.title') || t('gallery.aboutTitle')}
+              </h2>
+              <p className="text-muted leading-relaxed whitespace-pre-line text-center">
+                {getSetting('aboutMe.text') || t('gallery.aboutText')}
+              </p>
+            </div>
           </motion.div>
         )}
 
-        {/* Navigation */}
+        {/* ======================== NAVIGATION ======================== */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.4 }}
           className="flex flex-wrap items-center justify-center gap-3 mb-4"
         >
-          <Link href="/" className="btn btn-sm">
-            {t('gallery.backToHome')}
-          </Link>
+          <Link href="/" className="btn btn-sm">{t('gallery.backToHome')}</Link>
         </motion.div>
 
-        {/* Category Filter */}
+        {/* ======================== CATEGORY FILTER ======================== */}
         {!loading && images.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -258,35 +344,32 @@ export default function GalleryPage() {
           </motion.div>
         )}
 
-        {/* Loading State */}
+        {/* ======================== LOADING ======================== */}
         {loading && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="card overflow-hidden p-0">
-                <div className={`${getGridClass(i)} skeleton`} />
-                <div className="p-4 space-y-2">
-                  <div className="h-4 w-2/3 skeleton rounded" />
-                  <div className="h-3 w-full skeleton rounded" />
+          <div className="space-y-8">
+            {[1, 2, 3].map((s) => (
+              <div key={s}>
+                <div className="h-8 w-48 skeleton rounded-lg mb-4" />
+                <div className="flex gap-4">
+                  {[1, 2, 3, 4].map((c) => (
+                    <div key={c} className="w-[280px] h-[200px] skeleton rounded-xl flex-shrink-0" />
+                  ))}
                 </div>
               </div>
             ))}
           </div>
         )}
 
-        {/* Empty State */}
+        {/* ======================== EMPTY ======================== */}
         {!loading && images.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-20"
-          >
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20">
             <div className="text-6xl mb-6">🖼️</div>
             <p className="text-muted text-lg">{t('gallery.noImages')}</p>
             <p className="text-sm text-muted mt-2">{t('gallery.addImages')}</p>
           </motion.div>
         )}
 
-        {/* Gallery Grid - by Category */}
+        {/* ======================== CATEGORY CAROUSELS ======================== */}
         {!loading && images.length > 0 && (
           <AnimatePresence mode="wait">
             <motion.div
@@ -297,77 +380,67 @@ export default function GalleryPage() {
               transition={{ duration: 0.3 }}
             >
               {Object.entries(grouped).map(([cat, catImages]) => (
-                <div key={cat} className="mb-12 last:mb-0">
-                  {/* Section Header */}
-                  {activeCategory === 'all' && (
-                    <motion.div
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      className="flex items-center gap-3 mb-6"
-                    >
-                      <div className="w-1 h-8 bg-[#FFE600] rounded-full" />
-                      <h2 className="text-2xl font-bold text-accent dark:text-white flex items-center gap-2">
-                        <span>{categoryMeta[cat]?.emoji}</span>
-                        <span>{getCategoryLabel(cat)}</span>
-                      </h2>
-                      <span className="text-sm text-muted ml-2">({catImages.length})</span>
-                    </motion.div>
-                  )}
+                <div key={cat} className="mb-14 last:mb-0">
+                  {/* Category Header Card */}
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="section-pill mb-6 inline-flex"
+                  >
+                    <span className="text-xl">{categoryMeta[cat]?.emoji}</span>
+                    <span className="text-lg font-bold text-accent dark:text-white">{getCategoryLabel(cat)}</span>
+                    <span className="text-sm text-muted">({catImages.length})</span>
+                  </motion.div>
 
-                  {/* Image Grid */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                    <AnimatePresence mode="popLayout">
+                  {/* Carousel Track */}
+                  <div className="relative">
+                    <div className="carousel-track">
                       {catImages.map((img, index) => (
                         <motion.div
                           key={img._id}
-                          layout
-                          initial={{ opacity: 0, scale: 0.9 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.9 }}
-                          transition={{ duration: 0.4, delay: index * 0.05 }}
-                          className="group cursor-pointer"
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          className="carousel-card"
                           onClick={() => setSelectedImage(img)}
                         >
-                          <div className={`card overflow-hidden p-0 h-full card-hover`}>
-                            <div className={`relative overflow-hidden ${getGridClass(index)}`}>
+                          <div className="relative overflow-hidden rounded-xl">
+                            <div className="w-[280px] h-[200px] md:h-[240px]">
                               <img
                                 src={img.url}
                                 alt={img.title || 'Gallery image'}
-                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
+                                loading="lazy"
                               />
-                              {img.featured && (
-                                <span className="absolute top-2 right-2 bg-[#FFE600] text-[#111827] text-[10px] font-bold px-2 py-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                                  ★
-                                </span>
-                              )}
-                              {/* Hover overlay */}
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
-                                <div className="text-white">
-                                  {img.title && (
-                                    <h3 className="text-sm font-semibold leading-tight">{img.title}</h3>
-                                  )}
-                                  <span className="text-xs text-gray-300 mt-1 block">
-                                    {categoryMeta[img.category]?.emoji} {getCategoryLabel(img.category)}
-                                  </span>
-                                </div>
-                              </div>
                             </div>
-                            {(img.title || img.description) && (
-                              <div className="p-3">
-                                {img.title && (
-                                  <h3 className="text-sm font-semibold text-accent dark:text-white truncate">
-                                    {img.title}
-                                  </h3>
-                                )}
-                                {img.description && (
-                                  <p className="text-xs text-muted mt-0.5 line-clamp-2">{img.description}</p>
-                                )}
-                              </div>
+                            {img.featured && (
+                              <span className="absolute top-2 right-2 bg-[#FFE600] text-[#111827] text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                ★
+                              </span>
                             )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+                              {img.title && (
+                                <h3 className="text-white text-sm font-semibold">{img.title}</h3>
+                              )}
+                              <span className="text-gray-300 text-xs mt-1">
+                                {categoryMeta[img.category]?.emoji} {getCategoryLabel(img.category)}
+                              </span>
+                            </div>
                           </div>
+                          {(img.title || img.description) && (
+                            <div className="p-2">
+                              {img.title && (
+                                <h3 className="text-sm font-semibold text-accent dark:text-white truncate">{img.title}</h3>
+                              )}
+                              {img.description && (
+                                <p className="text-xs text-muted mt-0.5 line-clamp-2">{img.description}</p>
+                              )}
+                            </div>
+                          )}
                         </motion.div>
                       ))}
-                    </AnimatePresence>
+                    </div>
+                    <div className="carousel-fade-right" />
                   </div>
                 </div>
               ))}
@@ -376,15 +449,30 @@ export default function GalleryPage() {
         )}
       </div>
 
-      {/* Footer */}
-      {!loading && getSetting('footer.text') && (
+      {/* ======================== FOOTER ======================== */}
+      {!loading && (getSetting('footer.text') || footerImages.length > 0) && (
         <motion.footer
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6 }}
           className="container pb-8 text-center"
         >
-          <p className="text-muted text-sm">{getSetting('footer.text')}</p>
+          {footerImages.length > 0 && (
+            <div className="flex gap-3 overflow-x-auto pb-3 mb-4 justify-center">
+              {footerImages.map(img => (
+                <img
+                  key={img._id}
+                  src={img.url}
+                  alt={img.title || ''}
+                  className="h-20 md:h-24 rounded-xl object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => setSelectedImage(img)}
+                />
+              ))}
+            </div>
+          )}
+          {getSetting('footer.text') && (
+            <p className="text-muted text-sm">{getSetting('footer.text')}</p>
+          )}
         </motion.footer>
       )}
 

@@ -49,8 +49,8 @@ function Home() {
   }
 
   const { scrollYProgress } = useScroll();
-  const patternOpacity = useTransform(scrollYProgress, [0, 0.75], [0.8, 0]);
-  const patternY = useTransform(scrollYProgress, [0, 1], [0, -100]);
+  const patternOpacity = useTransform(scrollYProgress, [0, 0.55], [0.8, 0]);
+  const patternY = useTransform(scrollYProgress, [0, 0.55], [0, -40]);
 
   return (
     <div className="font-quantico leading-normal text-text-main max-w-full overflow-x-hidden mx-auto bg-bg-app text-lg" onMouseMove={handleMouseMove}>

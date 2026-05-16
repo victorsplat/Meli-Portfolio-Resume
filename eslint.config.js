@@ -24,6 +24,8 @@ export default [
         localStorage: 'readonly',
         console: 'readonly',
         setTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
         fetch: 'readonly',
         FormData: 'readonly',
         FileReader: 'readonly',

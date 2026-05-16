@@ -1,6 +1,5 @@
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'];
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
-const MAX_BASE64_LENGTH = MAX_IMAGE_SIZE * 1.37; // base64 is ~37% larger
+const MAX_IMAGE_SIZE = 15 * 1024 * 1024; // 15MB
 
 export function sanitize(str) {
   if (typeof str !== 'string') return '';
@@ -47,8 +46,8 @@ export function validatePhone(phone) {
 export function validateImage(image) {
   if (typeof image !== 'string') return { valid: false, error: 'Invalid image data' };
 
-  if (image.length > MAX_BASE64_LENGTH) {
-    return { valid: false, error: 'Image too large (max 10MB)' };
+  if (image.length > MAX_IMAGE_SIZE * 1.37) {
+    return { valid: false, error: 'Image too large (max 15MB)' };
   }
 
   const match = image.match(/^data:([^;]+);/);

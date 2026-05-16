@@ -5,11 +5,22 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
 import { usePageTitle } from '@/lib/usePageTitle';
-import PageHeader from '@/components/PageHeader';
 import GalleryLightbox from '@/components/GalleryLightbox';
 
 const AUTH_KEY = 'gallery_admin_token';
 const MAX_FILES = 20;
+const MAX_FILE_SIZE = 15 * 1024 * 1024;
+const MAX_DIM = 2000;
+const JPEG_QUALITY = 0.85;
+
+const categories = [
+  { value: 'design', labelKey: 'galleryAdmin.categoryDesign' },
+  { value: 'aboutMe', labelKey: 'galleryAdmin.categoryAboutMe' },
+  { value: 'skate', labelKey: 'galleryAdmin.categorySkate' },
+  { value: 'drinks', labelKey: 'galleryAdmin.categoryDrinks' },
+  { value: 'food', labelKey: 'galleryAdmin.categoryFood' },
+  { value: 'others', labelKey: 'galleryAdmin.categoryOthers' },
+];
 
 export default function GalleryAdmin() {
   const { t } = useI18n();
@@ -28,6 +39,7 @@ export default function GalleryAdmin() {
   const [featured, setFeatured] = useState(false);
   const [files, setFiles] = useState([]);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef(null);
   const passwordRef = useRef(null);
 
@@ -98,10 +110,10 @@ export default function GalleryAdmin() {
     }
   }
 
-  function compressImage(file, maxDim = 1200, quality = 0.8) {
+  function compressImage(file, maxDim = MAX_DIM, quality = JPEG_QUALITY) {
     return new Promise((resolve, reject) => {
-      if (file.size > 10 * 1024 * 1024) {
-        reject(new Error(`"${file.name}" exceeds 10MB`));
+      if (file.size > MAX_FILE_SIZE) {
+        reject(new Error(`"${file.name}" exceeds 15MB`));
         return;
       }
       const reader = new FileReader();
@@ -125,7 +137,7 @@ export default function GalleryAdmin() {
           ctx.drawImage(img, 0, 0, width, height);
           canvas.toBlob((blob) => {
             const fr = new FileReader();
-            fr.onload = () => resolve({ name: file.name, preview: fr.result });
+            fr.onload = () => resolve({ name: file.name, preview: fr.result, width, height, originalSize: file.size, compressedSize: blob.size });
             fr.onerror = reject;
             fr.readAsDataURL(blob);
           }, 'image/jpeg', quality);
@@ -138,31 +150,74 @@ export default function GalleryAdmin() {
     });
   }
 
-  async function handleFileSelect(e) {
-    const selected = Array.from(e.target.files).slice(0, MAX_FILES);
-    if (selected.length === 0) return;
+  function handleDragOver(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragging(true);
+  }
 
-    const oversized = selected.filter(f => f.size > 10 * 1024 * 1024);
+  function handleDragLeave(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragging(false);
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragging(false);
+    const dropped = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+    processFiles(dropped);
+  }
+
+  function handleFileSelect(e) {
+    const selected = Array.from(e.target.files);
+    processFiles(selected);
+    e.target.value = '';
+  }
+
+  function processFiles(selected) {
+    const imagesOnly = selected.filter(f => f.type.startsWith('image/')).slice(0, MAX_FILES - files.length);
+    if (imagesOnly.length === 0) return;
+
+    const oversized = imagesOnly.filter(f => f.size > MAX_FILE_SIZE);
     if (oversized.length > 0) {
-      alert(`Some files exceed 10MB:\n${oversized.map(f => `- ${f.name}`).join('\n')}`);
-      e.target.value = '';
+      alert(`Some files exceed 15MB:\n${oversized.map(f => `- ${f.name} (${(f.size / 1024 / 1024).toFixed(1)}MB)`).join('\n')}`);
       return;
     }
 
     const compressed = [];
-    for (const file of selected) {
-      try {
-        const result = await compressImage(file);
-        compressed.push({ id: `${Date.now()}-${compressed.length}`, ...result });
-      } catch (err) {
-        alert(err.message);
-        e.target.value = '';
-        return;
+    for (const file of imagesOnly) {
+      const existing = files.find(f => f.originalName === file.name);
+      if (existing) {
+        compressed.push(existing);
+        continue;
       }
+      const id = `${Date.now()}-${compressed.length}`;
+      const url = URL.createObjectURL(file);
+      compressed.push({ id, originalName: file.name, preview: url, file, compressed: false });
     }
 
     setFiles(prev => [...prev, ...compressed].slice(0, MAX_FILES));
-    e.target.value = '';
+  }
+
+  async function compressPending() {
+    const updated = [...files];
+    let hasChanges = false;
+    for (let i = 0; i < updated.length; i++) {
+      if (!updated[i].compressed && updated[i].file) {
+        try {
+          const result = await compressImage(updated[i].file);
+          updated[i] = { ...updated[i], ...result, compressed: true, file: null };
+          hasChanges = true;
+        } catch (err) {
+          alert(err.message);
+          return null;
+        }
+      }
+    }
+    if (hasChanges) setFiles(updated);
+    return updated;
   }
 
   function removeFile(id) {
@@ -170,20 +225,26 @@ export default function GalleryAdmin() {
   }
 
   async function handleUpload() {
-    if (files.length === 0) return;
+    const ready = await compressPending();
+    if (!ready || ready.length === 0) return;
 
     setUploading(true);
-    setUploadProgress({ current: 0, total: files.length });
+    setUploadProgress({ current: 0, total: ready.length });
     const errors = [];
 
-    for (let i = 0; i < files.length; i++) {
-      setUploadProgress({ current: i + 1, total: files.length });
+    for (let i = 0; i < ready.length; i++) {
+      setUploadProgress({ current: i + 1, total: ready.length });
+      const file = ready[i];
+      if (!file.preview) {
+        errors.push(`"${file.originalName}": No image data`);
+        continue;
+      }
       try {
         const res = await fetch('/api/gallery', {
           method: 'POST',
           headers: getAuthHeaders(),
           body: JSON.stringify({
-            image: files[i].preview,
+            image: file.preview,
             title,
             description,
             category,
@@ -192,10 +253,10 @@ export default function GalleryAdmin() {
         });
         if (!res.ok) {
           const data = await res.json();
-          errors.push(`"${files[i].name}": ${data.error || t('galleryAdmin.uploadFailed')}`);
+          errors.push(`"${file.originalName}": ${data.error || t('galleryAdmin.uploadFailed')}`);
         }
       } catch (error) {
-        errors.push(`"${files[i].name}": ${error.message}`);
+        errors.push(`"${file.originalName}": ${error.message}`);
       }
     }
 
@@ -235,8 +296,11 @@ export default function GalleryAdmin() {
           animate={{ opacity: 1, y: 0 }}
           className="card max-w-md w-full mx-4 p-8"
         >
+          <div className="text-center mb-2">
+            <span className="text-4xl">🖼</span>
+          </div>
           <h1 className="title text-2xl text-center mb-2">{t('galleryAdmin.title')}</h1>
-          <p className="text-muted text-center mb-6 text-sm">Enter admin password to continue</p>
+          <p className="text-muted text-center mb-6 text-sm">{t('galleryAdmin.title')} Access</p>
           <form onSubmit={handleLogin} className="space-y-4">
             <input
               ref={passwordRef}
@@ -248,7 +312,9 @@ export default function GalleryAdmin() {
               autoFocus
             />
             {authError && (
-              <p className="text-red-500 text-sm text-center">{authError}</p>
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-sm text-center">
+                {authError}
+              </motion.p>
             )}
             <button type="submit" className="btn w-full">
               Authenticate
@@ -266,206 +332,293 @@ export default function GalleryAdmin() {
 
   return (
     <div className="min-h-screen bg-bg-app">
-      <div className="container py-12">
-        <PageHeader />
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
-        >
-          <h1 className="title text-4xl md:text-5xl">{t('galleryAdmin.title')}</h1>
-          <div className="flex justify-center gap-4 mt-6">
-            <Link href="/" className="btn btn-sm">
-              {t('galleryAdmin.backToHome')}
-            </Link>
-            <Link href="/gallery" className="btn btn-sm btn-secondary">
-              {t('galleryAdmin.viewGallery')}
-            </Link>
-            <Link href="/galleryAdmin/dashboard" className="btn btn-sm" style={{ background: 'linear-gradient(135deg, #FFE600, #FFC000)', color: '#111827' }}>
-              📋 Dashboard
-            </Link>
-            <button onClick={handleLogout} className="btn btn-sm !bg-red-500 hover:!bg-red-600">
-              Logout
-            </button>
+      <div className="container py-8 md:py-12">
+        {/* Header */}
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 className="title text-3xl md:text-4xl mb-1">{t('galleryAdmin.title')}</h1>
+              <p className="text-muted text-sm">Manage your gallery images</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Link href="/" className="btn !text-xs !py-2 !px-3 !bg-white/80 dark:!bg-white/10 !text-accent hover:!bg-white dark:hover:!bg-white/20 !shadow-none border border-panel-border">
+                🏠 {t('galleryAdmin.backToHome')}
+              </Link>
+              <Link href="/gallery" className="btn !text-xs !py-2 !px-3 !bg-white/80 dark:!bg-white/10 !text-accent hover:!bg-white dark:hover:!bg-white/20 !shadow-none border border-panel-border">
+                👁 {t('galleryAdmin.viewGallery')}
+              </Link>
+              <Link href="/galleryAdmin/dashboard" className="btn !text-xs !py-2 !px-3" style={{ background: 'linear-gradient(135deg, #FFE600, #FFC000)', color: '#111827' }}>
+                📊 Dashboard
+              </Link>
+              <button onClick={handleLogout} className="btn !text-xs !py-2 !px-3 !bg-red-500 hover:!bg-red-600 !shadow-none">
+                🚪 Logout
+              </button>
+            </div>
           </div>
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="card max-w-xl mx-auto mb-12"
-        >
-          <h2 className="text-xl font-semibold mb-6 text-accent dark:text-white">{t('galleryAdmin.addNew')}</h2>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">{t('galleryAdmin.selectImage')}</label>
+        {/* Upload Section - Two Columns */}
+        <div className="grid md:grid-cols-5 gap-6 mb-12">
+          {/* Left Column - Drop Zone */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="md:col-span-3"
+          >
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={`card cursor-pointer transition-all duration-200 min-h-[240px] flex flex-col items-center justify-center text-center ${
+                dragging
+                  ? 'border-2 border-[#FFE600] shadow-[0_0_24px_rgba(255,230,0,0.15)]'
+                  : 'border-2 border-dashed border-panel-border hover:border-[#FFE600] hover:shadow-[0_0_16px_rgba(255,230,0,0.08)]'
+              }`}
+            >
+              <div className={`text-5xl mb-4 transition-transform duration-200 ${dragging ? 'scale-110' : ''}`}>
+                📁
+              </div>
+              <p className="text-lg font-semibold text-accent dark:text-white mb-2">
+                {dragging ? 'Drop files here' : 'Drop images here'}
+              </p>
+              <p className="text-sm text-muted mb-4">or click to browse</p>
+              <span className="inline-block px-4 py-2 rounded-lg bg-accent/10 text-accent dark:text-[#FFE600] text-xs font-medium">
+                Browse Files
+              </span>
+              <p className="text-xs text-muted mt-4">
+                PNG, JPG, WebP, GIF, AVIF &middot; up to 15MB each
+              </p>
               <input
                 ref={fileInputRef}
                 type="file"
                 multiple
                 accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
                 onChange={handleFileSelect}
-                className="w-full p-3 border border-[var(--panel-border)] rounded-lg bg-white/50 dark:bg-white/5"
+                className="hidden"
               />
-              <p className="text-xs text-muted mt-1">{t('galleryAdmin.fileLimit')}</p>
+            </div>
+          </motion.div>
+
+          {/* Right Column - Metadata */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="md:col-span-2 space-y-4"
+          >
+            <div className="card">
+              <h2 className="text-sm font-semibold text-accent dark:text-[#FFE600] uppercase tracking-wider mb-4">
+                Image Details
+              </h2>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-muted mb-1.5">{t('galleryAdmin.titleField')}</label>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder={t('galleryAdmin.titlePlaceholder')}
+                    className="input text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-muted mb-1.5">{t('galleryAdmin.descField')}</label>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder={t('galleryAdmin.descPlaceholder')}
+                    className="input text-sm min-h-[80px] resize-none"
+                    rows={3}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-muted mb-1.5">{t('galleryAdmin.category')}</label>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="input text-sm"
+                  >
+                    {categories.map(c => (
+                      <option key={c.value} value={c.value}>{t(c.labelKey)}</option>
+                    ))}
+                  </select>
+                </div>
+                <label className="flex items-center gap-3 cursor-pointer pt-1">
+                  <input
+                    type="checkbox"
+                    checked={featured}
+                    onChange={(e) => setFeatured(e.target.checked)}
+                    className="w-4 h-4 rounded border-panel-border accent-[#FFE600]"
+                  />
+                  <span className="text-sm font-medium text-muted">{t('galleryAdmin.markFeatured')}</span>
+                </label>
+              </div>
             </div>
 
-            {/* File Previews */}
-            {files.length > 0 && (
-              <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+            {/* Upload Button + Progress */}
+            <div className="card">
+              {uploading && (
+                <div className="mb-3 space-y-1.5">
+                  <div className="flex justify-between text-xs text-muted">
+                    <span>{t('galleryAdmin.uploadProgress', { current: uploadProgress.current, total: uploadProgress.total })}</span>
+                    <span className="font-medium text-accent dark:text-[#FFE600]">
+                      {Math.round((uploadProgress.current / uploadProgress.total) * 100)}%
+                    </span>
+                  </div>
+                  <div className="w-full h-1.5 bg-panel-border rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
+                      className="h-full bg-gradient-to-r from-[#FFE600] to-[#2D3277] rounded-full"
+                      transition={{ duration: 0.3 }}
+                    />
+                  </div>
+                </div>
+              )}
+              <button
+                onClick={handleUpload}
+                disabled={files.length === 0 || uploading}
+                className="btn w-full text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {uploading
+                  ? `⏳ ${t('galleryAdmin.uploading')}`
+                  : files.length > 0
+                    ? `↑ ${t('galleryAdmin.uploadAll', { count: files.length })}`
+                    : `↑ ${t('galleryAdmin.uploadAll', { count: 0 })}`}
+              </button>
+              <p className="text-[10px] text-muted text-center mt-2">
+                {t('galleryAdmin.rateLimit')}
+              </p>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Selected Files Strip */}
+        <AnimatePresence>
+          {files.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="card mb-12"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-accent dark:text-[#FFE600]">
+                  Selected ({files.length})
+                </h3>
+                <span className="text-[10px] text-muted">
+                  Click ✕ to remove
+                </span>
+              </div>
+              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
                 {files.map((f) => (
-                  <div key={f.id} className="relative aspect-square rounded-lg overflow-hidden group">
-                    <img src={f.preview} alt="" className="w-full h-full object-cover" />
+                  <motion.div
+                    key={f.id}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="relative flex-shrink-0 group"
+                  >
+                    <div className="w-20 h-20 rounded-xl overflow-hidden ring-1 ring-panel-border">
+                      <img
+                        src={f.preview}
+                        alt={f.originalName}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
                     <button
                       onClick={() => removeFile(f.id)}
                       disabled={uploading}
-                      className="absolute top-1 right-1 bg-red-500/90 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity disabled:hidden"
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center text-xs hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity shadow-md disabled:hidden"
                     >
                       ✕
                     </button>
-                    <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] px-1 py-0.5 truncate">
-                      {f.name}
-                    </div>
-                  </div>
+                    <p className="text-[9px] text-muted mt-1 max-w-20 truncate text-center">
+                      {f.originalName}
+                    </p>
+                    {f.compressedSize && (
+                      <p className="text-[8px] text-green-600 dark:text-green-400 text-center">
+                        {(f.compressedSize / 1024).toFixed(0)}KB
+                      </p>
+                    )}
+                  </motion.div>
                 ))}
               </div>
-            )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">{t('galleryAdmin.titleField')}</label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder={t('galleryAdmin.titlePlaceholder')}
-                className="input"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">{t('galleryAdmin.descField')}</label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder={t('galleryAdmin.descPlaceholder')}
-                className="textarea"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">{t('galleryAdmin.category')}</label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="input"
-              >
-                <option value="design">{t('galleryAdmin.categoryDesign')}</option>
-                <option value="aboutMe">{t('galleryAdmin.categoryAboutMe')}</option>
-                <option value="skate">{t('galleryAdmin.categorySkate')}</option>
-                <option value="drinks">{t('galleryAdmin.categoryDrinks')}</option>
-                <option value="food">{t('galleryAdmin.categoryFood')}</option>
-                <option value="others">{t('galleryAdmin.categoryOthers')}</option>
-              </select>
-            </div>
-
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={featured}
-                onChange={(e) => setFeatured(e.target.checked)}
-                className="w-5 h-5 rounded border-panel-border accent-[#FFE600]"
-              />
-              <span className="text-sm font-medium">{t('galleryAdmin.markFeatured')}</span>
-            </label>
-
-            {/* Upload Progress */}
-            {uploading && (
-              <div className="space-y-2">
-                <div className="flex justify-between text-xs text-muted">
-                  <span>{t('galleryAdmin.uploadProgress', { current: uploadProgress.current, total: uploadProgress.total })}</span>
-                  <span>{Math.round((uploadProgress.current / uploadProgress.total) * 100)}%</span>
-                </div>
-                <div className="w-full h-2 bg-panel-border rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
-                    className="h-full bg-gradient-to-r from-[#FFE600] to-[#2D3277] rounded-full"
-                    transition={{ duration: 0.3 }}
-                  />
-                </div>
-              </div>
-            )}
-
-            <button
-              onClick={handleUpload}
-              disabled={files.length === 0 || uploading}
-              className="btn w-full disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {uploading
-                ? t('galleryAdmin.uploading')
-                : files.length > 0
-                  ? t('galleryAdmin.uploadAll', { count: files.length })
-                  : t('galleryAdmin.upload')}
-            </button>
-
-            <p className="text-xs text-muted text-center mt-3">
-              {t('galleryAdmin.rateLimit')}
-            </p>
-          </div>
-        </motion.div>
-
-        <div className="mb-8">
-          <h2 className="title text-2xl">{t('galleryAdmin.existing')} ({images.length})</h2>
+        {/* Existing Images */}
+        <div className="mb-6">
+          <h2 className="title text-xl">
+            {t('galleryAdmin.existing')}
+            <span className="text-muted text-lg ml-2">({images.length})</span>
+          </h2>
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {[1,2,3,4].map((i) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {[1,2,3,4,5,6].map((i) => (
               <div key={i} className="card p-3">
                 <div className="aspect-square skeleton rounded-lg mb-3" />
-                <div className="h-4 w-2/3 skeleton" />
+                <div className="h-4 w-2/3 skeleton mb-2" />
+                <div className="h-3 w-1/2 skeleton" />
               </div>
             ))}
           </div>
         ) : images.length === 0 ? (
-          <div className="text-center py-10 text-muted">{t('galleryAdmin.noImages')}</div>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-16 text-muted"
+          >
+            <div className="text-5xl mb-4">📸</div>
+            <p className="text-lg font-medium mb-1">{t('galleryAdmin.noImages')}</p>
+          </motion.div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             <AnimatePresence>
-              {images.map((img) => (
+              {images.map((img, i) => (
                 <motion.div
                   key={img._id}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.9 }}
-                  className="card p-3 cursor-pointer group relative"
+                  transition={{ delay: i * 0.03 }}
+                  className="card p-3 cursor-pointer group relative card-hover"
                   onClick={() => setSelectedImage(img)}
                   layout
                 >
                   {img.featured && (
-                    <span className="absolute top-5 right-5 bg-[#FFE600] text-[#111827] text-[10px] font-bold px-2 py-0.5 rounded-full z-10">
-                      ★ {t('galleryAdmin.featured')}
+                    <span className="absolute top-4 right-4 bg-[#FFE600] text-[#111827] text-[10px] font-bold px-2 py-0.5 rounded-full z-10 shadow-md">
+                      ★ Featured
                     </span>
                   )}
-                  <div className="aspect-square rounded-lg overflow-hidden mb-3">
+                  <div className="aspect-square rounded-xl overflow-hidden mb-3 ring-1 ring-panel-border/50">
                     <img
                       src={img.url}
                       alt={img.title || 'Gallery image'}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      loading="lazy"
                     />
                   </div>
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="space-y-1">
                     {img.title && (
-                      <h3 className="text-sm font-medium truncate text-accent dark:text-white flex-1">
+                      <h3 className="text-xs font-semibold text-accent dark:text-white truncate">
                         {img.title}
                       </h3>
                     )}
-                    <span className="text-[10px] uppercase tracking-wider text-muted bg-white/20 dark:bg-white/10 px-1.5 py-0.5 rounded">
-                      {t('galleryAdmin.category' + img.category.charAt(0).toUpperCase() + img.category.slice(1))}
-                    </span>
+                    <div className="flex items-center justify-between">
+                      {img.description && (
+                        <p className="text-[10px] text-muted truncate flex-1 mr-2">
+                          {img.description}
+                        </p>
+                      )}
+                      <span className="text-[9px] uppercase tracking-wider text-muted bg-accent/5 dark:bg-white/10 px-1.5 py-0.5 rounded flex-shrink-0">
+                        {t('galleryAdmin.category' + img.category.charAt(0).toUpperCase() + img.category.slice(1))}
+                      </span>
+                    </div>
                   </div>
-                  <p className="text-xs text-muted truncate">{img.description}</p>
                 </motion.div>
               ))}
             </AnimatePresence>

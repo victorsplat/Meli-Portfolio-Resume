@@ -85,16 +85,32 @@ src/
 - **Vercel build fix**: Refactored `mongodb.js` to lazy-init pattern — MongoDB connection no longer fires at module import time (was causing `Failed to collect page data for /api/applications` during build). Updated all 3 API routes to use the lazy getter.
 
 ### Pending / Known Issues
-- Gallery stores images as base64 in MongoDB — works but suboptimal. Planned future migration to Supabase/Cloudinary.
+- Gallery stores images as base64 in MongoDB — works but suboptimal. Migrated to Vercel Blob for new uploads (see May 12).
 
 ## Environment Variables (.env.local — NOT in git)
 ```
 MONGODB_URI=mongodb+srv://victorsplat_db:44112841Pan@cluster0.aqnrrlq.mongodb.net/?appName=Cluster0
 ADMIN_API_KEY=meli-admin-2024-secure-key
+BLOB_READ_WRITE_TOKEN=your_vercel_blob_token_here
+GALLERY_RW_TOKEN_READ_WRITE_TOKEN=vercel_blob_rw_pnsJoE0Xley6PaKk_xgk0jAOnsyYk3pT8cUYFwJYV84R7aH
 ```
-> `MONGODB_URI` and `ADMIN_API_KEY` must be set manually in Vercel dashboard → Environment Variables. `.env.local` is gitignored and not loaded by Vercel.
+> `MONGODB_URI`, `ADMIN_API_KEY`, and `BLOB_READ_WRITE_TOKEN` must be set manually in Vercel dashboard → Environment Variables. `.env.local` is gitignored and not loaded by Vercel.
 
 ## Known Vercel/Deployment Constraints
 - **Vercel ignores `.env.local`** — all secrets must be set in Vercel dashboard
 - **Atlas IP whitelist** must include `0.0.0.0/0` for Vercel (dynamic IPs)
-- **Client-side Canvas compression** (1200px max, JPEG q0.8) is necessary to stay under Vercel's 4.5MB serverless body limit
+- **Client-side Canvas compression** (2000px max, JPEG q0.85) keeps payload under Vercel's 4.5MB serverless body limit
+- **Vercel Blob** (`@vercel/blob`) used for image storage — old base64 images in MongoDB remain accessible
+
+## Session History
+
+### May 12 — Vercel Blob Migration + Admin UI Redesign
+- **Image storage migration**: New `POST /api/gallery` uploads to Vercel Blob via `@vercel/blob` `put()` instead of storing base64 in MongoDB. MongoDB now stores only the Blob URL + metadata (tiny docs, no 16MB limit).
+- **Sharp fallback preserved**: If `BLOB_READ_WRITE_TOKEN` is not set or Blob upload fails, falls back to Sharp WebP re-encoding into MongoDB base64 (existing behavior).
+- **Blob cleanup on delete**: `DELETE /api/gallery` now also removes the image from Vercel Blob when the URL is a blob URL.
+- **Admin page redesigned** (`galleryAdmin/page.jsx`): Modern drag-and-drop upload zone, two-column layout (drop zone left, metadata right), glassmorphism styling matching gallery aesthetic, selected files thumbnail strip with per-file remove. Updated color scheme with MELI yellow accents.
+- **Higher quality compression**: Client-side Canvas compression increased to 2000px max, JPEG q0.85 (was 1200px, q0.8).
+- **15MB file limit**: `MAX_IMAGE_SIZE` increased from 10MB to 15MB in `validate.js` and all i18n translations.
+- **Sharp removed from imports but kept in dependencies** as fallback for base64 storage path.
+- **`@vercel/blob` v2.3.3** added to dependencies.
+- **Lint clean**: Removed unused `useCallback` import from admin page.
