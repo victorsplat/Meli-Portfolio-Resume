@@ -305,10 +305,10 @@ export default function DashboardPage() {
               <p className="text-muted text-sm mt-1">Manage gallery content, images, and categories</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <LanguageSwitcher />
               <Link href="/galleryAdmin" className="btn btn-sm">← Image Manager</Link>
               <Link href="/gallery" className="btn btn-sm btn-secondary">View Gallery</Link>
               <Button variant="destructive" size="sm" onClick={logout}>Logout</Button>
+              <LanguageSwitcher />
             </div>
           </div>
         </motion.div>

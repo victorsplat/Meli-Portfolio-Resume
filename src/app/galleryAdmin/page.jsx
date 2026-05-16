@@ -360,7 +360,6 @@ export default function GalleryAdmin() {
               <p className="text-muted text-sm">Manage your gallery images</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <LanguageSwitcher />
               <Link href="/" className="btn !text-xs !py-2 !px-3 !bg-white/80 dark:!bg-white/10 !text-accent hover:!bg-white dark:hover:!bg-white/20 !shadow-none border border-panel-border">
                 🏠 {t('galleryAdmin.backToHome')}
               </Link>
@@ -373,6 +372,7 @@ export default function GalleryAdmin() {
               <button onClick={logout} className="btn !text-xs !py-2 !px-3 !bg-red-500 hover:!bg-red-600 !shadow-none">
                 🚪 Logout
               </button>
+              <LanguageSwitcher />
             </div>
           </div>
         </motion.div>
