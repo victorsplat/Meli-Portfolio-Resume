@@ -10,13 +10,15 @@ import GalleryFooter from '@/components/GalleryFooter';
 import { Button } from '@/components/ui/button';
 import { X, ArrowLeft } from 'lucide-react';
 
-function mapToGalleryItem(img, catLabel) {
+function mapToGalleryItem(img, catLabel, lang) {
+  const titleText = img.title?.[lang] || img.title?.en || 'Untitled';
+  const descText = img.description?.[lang] || img.description?.en || '';
   return {
-    common: img.title || 'Untitled',
+    common: titleText,
     binomial: catLabel,
     photo: {
       url: img.url,
-      text: img.description || '',
+      text: descText,
       pos: 'center',
       by: 'Victor do Prado',
     },
@@ -68,7 +70,7 @@ export default function ExplorePage() {
     const filtered = activeCategory === 'all'
       ? images
       : images.filter((img) => img.category === activeCategory);
-    return filtered.map((img) => mapToGalleryItem(img, getCategoryLabel(img.category)));
+    return filtered.map((img) => mapToGalleryItem(img, getCategoryLabel(img.category), lang));
   }, [images, activeCategory, lang, categories]);
 
   return (

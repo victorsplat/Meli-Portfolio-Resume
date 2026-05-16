@@ -21,6 +21,35 @@ async function processWithSharp(image) {
   }
 }
 
+async function autoTranslate(text, source = 'en') {
+  if (!text?.trim()) return { en: text || '', es: '', pt: '' };
+  try {
+    const res = await fetch('https://libretranslate.com/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q: text, source, target: 'es', format: 'text' }),
+    });
+    const es = res.ok ? (await res.json()).translatedText || '' : '';
+    const res2 = await fetch('https://libretranslate.com/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q: text, source, target: 'pt', format: 'text' }),
+    });
+    const pt = res2.ok ? (await res2.json()).translatedText || '' : '';
+    return { en: text, es, pt };
+  } catch {
+    return { en: text, es: '', pt: '' };
+  }
+}
+
+function normalizeI18nField(val) {
+  if (val && typeof val === 'object' && !Array.isArray(val)) {
+    return { en: val.en || '', es: val.es || '', pt: val.pt || '' };
+  }
+  const str = String(val || '');
+  return { en: str, es: '', pt: '' };
+}
+
 export async function GET(_request) {
   try {
     const client = await getClient();
@@ -32,7 +61,9 @@ export async function GET(_request) {
       url: typeof doc.url === 'string' ? doc.url : doc.url,
       _id: doc._id.toString(),
       category: doc.category || 'others',
-      featured: doc.featured === true
+      featured: doc.featured === true,
+      title: normalizeI18nField(doc.title),
+      description: normalizeI18nField(doc.description),
     })));
   } catch (error) {
     console.error('Error fetching images:', error);
@@ -91,12 +122,15 @@ export async function POST(request) {
       }
     }
 
+    const titleText = typeof title === 'object' ? title : await autoTranslate(sanitize(String(title || '')));
+    const descText = typeof description === 'object' ? description : await autoTranslate(sanitize(String(description || '')));
+
     const collection = db.collection('images');
 
     const result = await collection.insertOne({
       url: finalUrl,
-      title: sanitize(title || ''),
-      description: sanitize(description || ''),
+      title: titleText,
+      description: descText,
       category: safeCategory,
       featured: featured === true,
       createdAt: new Date()
@@ -140,8 +174,28 @@ export async function PUT(request) {
     const safeCategory = validCategories.includes(category) ? category : undefined;
 
     const update = {};
-    if (title !== undefined) update.title = sanitize(title);
-    if (description !== undefined) update.description = sanitize(description);
+    if (title !== undefined) {
+      if (typeof title === 'object') {
+        update.title = {
+          en: sanitize(title.en || ''),
+          es: sanitize(title.es || ''),
+          pt: sanitize(title.pt || ''),
+        };
+      } else {
+        update.title = await autoTranslate(sanitize(String(title)));
+      }
+    }
+    if (description !== undefined) {
+      if (typeof description === 'object') {
+        update.description = {
+          en: sanitize(description.en || ''),
+          es: sanitize(description.es || ''),
+          pt: sanitize(description.pt || ''),
+        };
+      } else {
+        update.description = await autoTranslate(sanitize(String(description)));
+      }
+    }
     if (safeCategory !== undefined) update.category = safeCategory;
     if (featured !== undefined) update.featured = featured === true;
 

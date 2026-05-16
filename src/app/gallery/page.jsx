@@ -23,9 +23,15 @@ export default function GalleryPage() {
     .filter(Boolean);
   const featuredImages = images.filter((img) => img.featured);
 
-  const mediaImage = heroSettingsImages[0] || featuredImages[0] || images[0];
-  const bgImage = heroSettingsImages[1] || featuredImages[1] || mediaImage;
-  const postScrollBg = heroSettingsImages[2] || heroSettingsImages[0] || mediaImage;
+  const usedIds = new Set();
+  function pickHeroImage(idx) {
+    const img = heroSettingsImages[idx] || featuredImages.find(f => !usedIds.has(f._id)) || images.find(i => !usedIds.has(i._id));
+    if (img) usedIds.add(img._id);
+    return img;
+  }
+  const mediaImage = pickHeroImage(0);
+  const bgImage = pickHeroImage(1);
+  const postScrollBg = pickHeroImage(2);
 
   function getSetting(path) {
     if (!settings) return '';

@@ -6,21 +6,21 @@ const languageMap = z.object({
   pt: z.string().default(''),
 });
 
+export const galleryImageSchema = z.object({
+  _id: z.string(),
+  url: z.string(),
+  title: languageMap,
+  description: languageMap,
+  category: z.string().default('others'),
+  featured: z.boolean().default(false),
+  createdAt: z.string().optional(),
+});
+
 export const categorySchema = z.object({
   id: z.string().min(1).max(50),
   name: languageMap,
   emoji: z.string().default('📁'),
   sortOrder: z.number().int().min(0).default(0),
-});
-
-export const galleryImageSchema = z.object({
-  _id: z.string(),
-  url: z.string(),
-  title: z.string().default(''),
-  description: z.string().default(''),
-  category: z.string().default('others'),
-  featured: z.boolean().default(false),
-  createdAt: z.string().optional(),
 });
 
 export const gallerySettingsSchema = z.object({

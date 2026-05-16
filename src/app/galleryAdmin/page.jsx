@@ -228,19 +228,58 @@ export default function GalleryAdmin() {
     setFiles([]);
   }
 
-  const [editTitle, setEditTitle] = useState('');
-  const [editDesc, setEditDesc] = useState('');
+  const [editTitle, setEditTitle] = useState({ en: '', es: '', pt: '' });
+  const [editDesc, setEditDesc] = useState({ en: '', es: '', pt: '' });
   const [editCategory, setEditCategory] = useState('');
   const [editFeatured, setEditFeatured] = useState(false);
+  const [translatingImg, setTranslatingImg] = useState(false);
 
   useEffect(() => {
     if (selectedImage) {
-      setEditTitle(selectedImage.title || '');
-      setEditDesc(selectedImage.description || '');
+      const t = selectedImage.title || {};
+      const d = selectedImage.description || {};
+      setEditTitle({ en: t.en || '', es: t.es || '', pt: t.pt || '' });
+      setEditDesc({ en: d.en || '', es: d.es || '', pt: d.pt || '' });
       setEditCategory(selectedImage.category || '');
       setEditFeatured(selectedImage.featured || false);
     }
   }, [selectedImage]);
+
+  async function handleAutoTranslateImg() {
+    const enTitle = editTitle.en?.trim();
+    const enDesc = editDesc.en?.trim();
+    if (!enTitle && !enDesc) return;
+    setTranslatingImg(true);
+    try {
+      if (enTitle) {
+        const res1 = await fetch('https://libretranslate.com/translate', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ q: enTitle, source: 'en', target: 'es', format: 'text' }),
+        });
+        const es = res1.ok ? (await res1.json()).translatedText || '' : '';
+        const res2 = await fetch('https://libretranslate.com/translate', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ q: enTitle, source: 'en', target: 'pt', format: 'text' }),
+        });
+        const pt = res2.ok ? (await res2.json()).translatedText || '' : '';
+        setEditTitle(prev => ({ ...prev, es, pt }));
+      }
+      if (enDesc) {
+        const res1 = await fetch('https://libretranslate.com/translate', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ q: enDesc, source: 'en', target: 'es', format: 'text' }),
+        });
+        const es = res1.ok ? (await res1.json()).translatedText || '' : '';
+        const res2 = await fetch('https://libretranslate.com/translate', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ q: enDesc, source: 'en', target: 'pt', format: 'text' }),
+        });
+        const pt = res2.ok ? (await res2.json()).translatedText || '' : '';
+        setEditDesc(prev => ({ ...prev, es, pt }));
+      }
+    } catch {}
+    setTranslatingImg(false);
+  }
 
   async function handleUpdate() {
     if (!selectedImage) return;
@@ -363,6 +402,7 @@ export default function GalleryAdmin() {
                 <div>
                   <label className="block text-xs font-medium text-muted mb-1.5">{t('galleryAdmin.titleField')}</label>
                   <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('galleryAdmin.titlePlaceholder')} className="input text-sm" />
+                  <p className="text-[10px] text-muted mt-0.5">EN → ES, PT via auto-translate on upload</p>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-muted mb-1.5">{t('galleryAdmin.descField')}</label>
@@ -454,34 +494,39 @@ export default function GalleryAdmin() {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             <AnimatePresence>
-              {images.map((img, i) => (
-                <motion.div
-                  key={img._id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ delay: i * 0.03 }}
-                  className="card p-3 cursor-pointer group relative card-hover"
-                  onClick={() => setSelectedImage(img)}
-                  layout
-                >
-                  {img.featured && (
-                    <span className="absolute top-4 right-4 bg-[#FFE600] text-[#111827] text-[10px] font-bold px-2 py-0.5 rounded-full z-10 shadow-md">★ Featured</span>
-                  )}
-                  <div className="aspect-square rounded-xl overflow-hidden mb-3 ring-1 ring-panel-border/50">
-                    <img src={img.url} alt={img.title || 'Gallery image'} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" />
-                  </div>
-                  <div className="space-y-1">
-                    {img.title && <h3 className="text-xs font-semibold text-accent dark:text-white truncate">{img.title}</h3>}
-                    <div className="flex items-center justify-between">
-                      {img.description && <p className="text-[10px] text-muted truncate flex-1 mr-2">{img.description}</p>}
-                      <span className="text-[9px] uppercase tracking-wider text-muted bg-accent/5 dark:bg-white/10 px-1.5 py-0.5 rounded flex-shrink-0">
-                        {getCategoryName(img.category)}
-                      </span>
+              {images.map((img, i) => {
+                const titleText = img.title?.[lang] || img.title?.en || '';
+                const descText = img.description?.[lang] || img.description?.en || '';
+                const altText = titleText || 'Gallery image';
+                return (
+                  <motion.div
+                    key={img._id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ delay: i * 0.03 }}
+                    className="card p-3 cursor-pointer group relative card-hover"
+                    onClick={() => setSelectedImage(img)}
+                    layout
+                  >
+                    {img.featured && (
+                      <span className="absolute top-4 right-4 bg-[#FFE600] text-[#111827] text-[10px] font-bold px-2 py-0.5 rounded-full z-10 shadow-md">★ Featured</span>
+                    )}
+                    <div className="aspect-square rounded-xl overflow-hidden mb-3 ring-1 ring-panel-border/50">
+                      <img src={img.url} alt={altText} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" />
                     </div>
-                  </div>
-                </motion.div>
-              ))}
+                    <div className="space-y-1">
+                      {titleText && <h3 className="text-xs font-semibold text-accent dark:text-white truncate">{titleText}</h3>}
+                      <div className="flex items-center justify-between">
+                        {descText && <p className="text-[10px] text-muted truncate flex-1 mr-2">{descText}</p>}
+                        <span className="text-[9px] uppercase tracking-wider text-muted bg-accent/5 dark:bg-white/10 px-1.5 py-0.5 rounded flex-shrink-0">
+                          {getCategoryName(img.category)}
+                        </span>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
             </AnimatePresence>
           </div>
         )}
@@ -527,24 +572,41 @@ export default function GalleryAdmin() {
 
                   <div>
                     <label className="block text-xs font-medium text-muted mb-1">Title</label>
-                    <input
-                      type="text"
-                      value={editTitle}
-                      onChange={(e) => setEditTitle(e.target.value)}
-                      placeholder="Image title"
-                      className="input text-sm w-full"
-                    />
+                    {['en', 'es', 'pt'].map(l => (
+                      <div key={l} className="flex items-center gap-2 mb-1 last:mb-0">
+                        <span className="text-xs w-8 flex-shrink-0">{{ en: '🇺🇸', es: '🇦🇷', pt: '🇧🇷' }[l]}</span>
+                        <input
+                          type="text"
+                          value={editTitle[l] || ''}
+                          onChange={(e) => setEditTitle(prev => ({ ...prev, [l]: e.target.value }))}
+                          placeholder={`Title (${l})`}
+                          className="input text-sm flex-1"
+                        />
+                      </div>
+                    ))}
                   </div>
 
                   <div>
                     <label className="block text-xs font-medium text-muted mb-1">Description</label>
-                    <textarea
-                      value={editDesc}
-                      onChange={(e) => setEditDesc(e.target.value)}
-                      placeholder="Image description"
-                      className="input text-sm w-full min-h-[80px] resize-none"
-                      rows={3}
-                    />
+                    {['en', 'es', 'pt'].map(l => (
+                      <div key={l} className="flex items-start gap-2 mb-1 last:mb-0">
+                        <span className="text-xs w-8 flex-shrink-0 mt-2">{{ en: '🇺🇸', es: '🇦🇷', pt: '🇧🇷' }[l]}</span>
+                        <textarea
+                          value={editDesc[l] || ''}
+                          onChange={(e) => setEditDesc(prev => ({ ...prev, [l]: e.target.value }))}
+                          placeholder={`Description (${l})`}
+                          className="input text-sm flex-1 min-h-[50px] resize-none"
+                          rows={2}
+                        />
+                      </div>
+                    ))}
+                    <button
+                      onClick={handleAutoTranslateImg}
+                      disabled={translatingImg || !editTitle.en?.trim()}
+                      className="mt-1 text-xs text-accent dark:text-[#FFE600] hover:underline disabled:opacity-30"
+                    >
+                      {translatingImg ? '🔄 ...' : '🤖 EN → ES, PT'}
+                    </button>
                   </div>
 
                   <div>

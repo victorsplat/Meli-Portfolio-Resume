@@ -15,7 +15,8 @@ const LANGUAGES = [
 ];
 
 const TABS = [
-  { id: 'hero', label: 'Hero', icon: '🎬' },
+  { id: 'heroTexts', label: 'Hero Texts', icon: '📝' },
+  { id: 'heroImages', label: 'Hero Images', icon: '🎬' },
   { id: 'categories', label: 'Categories', icon: '🏷️' },
   { id: 'aboutMe', label: 'About', icon: '👤' },
   { id: 'footer', label: 'Footer', icon: '📝' },
@@ -60,7 +61,7 @@ export default function DashboardPage() {
   const [authError, setAuthError] = useState('');
   const [localSettings, setLocalSettings] = useState(null);
   const [saveMsg, setSaveMsg] = useState('');
-  const [tab, setTab] = useState('hero');
+  const [tab, setTab] = useState('heroTexts');
   const [translating, setTranslating] = useState({});
   const [newCategory, setNewCategory] = useState({ id: '', name: { en: '', es: '', pt: '' }, emoji: '📁' });
   const [showCategoryForm, setShowCategoryForm] = useState(false);
@@ -329,19 +330,19 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* === TAB: HERO === */}
-        {tab === 'hero' && (
-          <motion.div key="hero" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+        {/* === TAB: HERO TEXTS === */}
+        {tab === 'heroTexts' && (
+          <motion.div key="heroTexts" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
             <div className="card">
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-xl bg-[#FFE600]/20 flex items-center justify-center text-lg">🎬</div>
+                <div className="w-10 h-10 rounded-xl bg-[#FFE600]/20 flex items-center justify-center text-lg">📝</div>
                 <div>
-                  <h2 className="text-lg font-bold">Hero Section</h2>
-                  <p className="text-xs text-muted">Scroll-to-expand hero — title, subtitle, and 3 ordered images</p>
+                  <h2 className="text-lg font-bold">Hero Texts</h2>
+                  <p className="text-xs text-muted">Title and subtitle shown on the scroll-to-expand hero</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-xs font-medium text-muted mb-2">Title</label>
                   <div className="space-y-2">
@@ -392,101 +393,112 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </div>
+            </div>
+          </motion.div>
+        )}
 
-              <div className="border-t border-panel-border pt-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="text-sm font-semibold">Hero Images</h3>
-                    <p className="text-xs text-muted mt-0.5">Assign images to each slot. Max 3.</p>
-                  </div>
-                  <span className="text-xs font-medium text-accent dark:text-[#FFE600]">{orderedHero.length}/3</span>
+        {/* === TAB: HERO IMAGES === */}
+        {tab === 'heroImages' && (
+          <motion.div key="heroImages" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+            <div className="card">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-xl bg-[#FFE600]/20 flex items-center justify-center text-lg">🎬</div>
+                <div>
+                  <h2 className="text-lg font-bold">Hero Images</h2>
+                  <p className="text-xs text-muted">Select up to 3 images for the scroll-to-expand hero — no duplicates</p>
                 </div>
-
-                {(!images || images.length === 0) ? (
-                  <p className="text-sm text-muted py-6 text-center bg-accent/5 dark:bg-white/5 rounded-xl border border-dashed border-panel-border">
-                    No images available. Upload in Image Manager first.
-                  </p>
-                ) : (
-                  <div className="space-y-4">
-                    {/* 3 fixed slots */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-                      {HERO_POSITIONS.map((pos) => {
-                        const img = orderedHero[pos.index];
-                        return (
-                          <div key={pos.index} className={cn(
-                            "p-3 rounded-xl border text-center text-xs transition-all",
-                            img
-                              ? 'bg-accent/5 dark:bg-white/10 border-accent/20 dark:border-white/20'
-                              : 'bg-accent/5 dark:bg-white/5 border-dashed border-panel-border'
-                          )}>
-                            <div className="font-semibold text-accent dark:text-[#FFE600] mb-0.5">
-                              #{pos.index + 1} — {pos.label}
-                            </div>
-                            <div className="text-muted mb-2">{pos.desc}</div>
-                            <div className="relative aspect-video rounded-lg overflow-hidden bg-white/30 dark:bg-white/5">
-                              {img ? (
-                                <>
-                                  <img src={img.url} alt="" className="w-full h-full object-cover" />
-                                  <Button
-                                    variant="ghost"
-                                    size="icon-xs"
-                                    onClick={() => setHeroSlot(pos.index, null)}
-                                    className="absolute top-1 right-1 bg-black/50 text-white hover:bg-black/70 rounded-full w-5 h-5"
-                                  >
-                                    ✕
-                                  </Button>
-                                </>
-                              ) : (
-                                <div className="flex items-center justify-center h-full text-muted">
-                                  <span className="text-lg">+</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* All images grid for selection */}
-                    <p className="text-xs text-muted mb-2">Click an image to assign to slot 1, or use slot buttons below:</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {images.map((img) => {
-                        const slotIdx = (localSettings?.hero?.imageIds || []).indexOf(img._id);
-                        const selected = slotIdx !== -1;
-                        return (
-                          <div key={img._id} className="relative group">
-                            <button
-                              onClick={() => {
-                                if (selected) {
-                                  setHeroSlot(slotIdx, null);
-                                } else {
-                                  const firstEmpty = orderedHero.length;
-                                  if (firstEmpty < 3) setHeroSlot(firstEmpty, img._id);
-                                }
-                              }}
-                              className={cn(
-                                "relative w-14 h-14 rounded-lg overflow-hidden ring-2 transition-all",
-                                selected
-                                  ? 'ring-[#FFE600] ring-offset-1 ring-offset-[var(--bg-app)] scale-105'
-                                  : 'ring-panel-border hover:ring-accent/50 opacity-60 hover:opacity-100'
-                              )}
-                            >
-                              <img src={img.url} alt="" className="w-full h-full object-cover" />
-                              {selected && (
-                                <div className="absolute inset-0 bg-[#FFE600]/15 flex items-center justify-center">
-                                  <span className="w-5 h-5 rounded-full bg-[#FFE600] text-[#111827] text-[10px] font-bold flex items-center justify-center shadow-lg">
-                                    {slotIdx + 1}
-                                  </span>
-                                </div>
-                              )}
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
               </div>
+
+              <div className="flex items-center justify-between pb-4 border-b border-panel-border mb-4">
+                <div>
+                  <p className="text-sm font-semibold">Slots</p>
+                  <p className="text-xs text-muted">Assign images to each role</p>
+                </div>
+                <span className="text-xs font-medium text-accent dark:text-[#FFE600]">{orderedHero.length}/3</span>
+              </div>
+
+              {(!images || images.length === 0) ? (
+                <p className="text-sm text-muted py-6 text-center bg-accent/5 dark:bg-white/5 rounded-xl border border-dashed border-panel-border">
+                  No images available. Upload in Image Manager first.
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+                    {HERO_POSITIONS.map((pos) => {
+                      const img = orderedHero[pos.index];
+                      return (
+                        <div key={pos.index} className={cn(
+                          "p-3 rounded-xl border text-center text-xs transition-all",
+                          img
+                            ? 'bg-accent/5 dark:bg-white/10 border-accent/20 dark:border-white/20'
+                            : 'bg-accent/5 dark:bg-white/5 border-dashed border-panel-border'
+                        )}>
+                          <div className="font-semibold text-accent dark:text-[#FFE600] mb-0.5">
+                            #{pos.index + 1} — {pos.label}
+                          </div>
+                          <div className="text-muted mb-2">{pos.desc}</div>
+                          <div className="relative aspect-video rounded-lg overflow-hidden bg-white/30 dark:bg-white/5">
+                            {img ? (
+                              <>
+                                <img src={img.url} alt="" className="w-full h-full object-cover" />
+                                <Button
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  onClick={() => setHeroSlot(pos.index, null)}
+                                  className="absolute top-1 right-1 bg-black/50 text-white hover:bg-black/70 rounded-full w-5 h-5"
+                                >
+                                  ✕
+                                </Button>
+                              </>
+                            ) : (
+                              <div className="flex items-center justify-center h-full text-muted">
+                                <span className="text-lg">+</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <p className="text-xs text-muted mb-2">Click an image to assign to the first empty slot:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {images.map((img) => {
+                      const slotIdx = (localSettings?.hero?.imageIds || []).indexOf(img._id);
+                      const selected = slotIdx !== -1;
+                      return (
+                        <div key={img._id} className="relative group">
+                          <button
+                            onClick={() => {
+                              if (selected) {
+                                setHeroSlot(slotIdx, null);
+                              } else {
+                                const firstEmpty = orderedHero.length;
+                                if (firstEmpty < 3) setHeroSlot(firstEmpty, img._id);
+                              }
+                            }}
+                            className={cn(
+                              "relative w-14 h-14 rounded-lg overflow-hidden ring-2 transition-all",
+                              selected
+                                ? 'ring-[#FFE600] ring-offset-1 ring-offset-[var(--bg-app)] scale-105'
+                                : 'ring-panel-border hover:ring-accent/50 opacity-60 hover:opacity-100'
+                            )}
+                          >
+                            <img src={img.url} alt="" className="w-full h-full object-cover" />
+                            {selected && (
+                              <div className="absolute inset-0 bg-[#FFE600]/15 flex items-center justify-center">
+                                <span className="w-5 h-5 rounded-full bg-[#FFE600] text-[#111827] text-[10px] font-bold flex items-center justify-center shadow-lg">
+                                  {slotIdx + 1}
+                                </span>
+                              </div>
+                            )}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </motion.div>
         )}
@@ -833,7 +845,8 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-center gap-3">
             <span className="text-xs text-muted hidden sm:block">
-              {tab === 'hero' && `${orderedHero.length} images selected`}
+              {tab === 'heroTexts' && 'hero text fields'}
+              {tab === 'heroImages' && `${orderedHero.length} images selected`}
               {tab === 'categories' && `${categoryList.length} categories`}
             </span>
             <Button
