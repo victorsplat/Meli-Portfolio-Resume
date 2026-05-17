@@ -41,6 +41,8 @@ export default function GalleryAdmin() {
   const [featured, setFeatured] = useState(false);
   const [files, setFiles] = useState([]);
   const [dragging, setDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, errors: [] });
   const fileInputRef = useRef(null);
   const passwordRef = useRef(null);
 
@@ -203,11 +205,14 @@ export default function GalleryAdmin() {
     const ready = await compressPending();
     if (!ready || ready.length === 0) return;
 
+    setUploading(true);
+    setUploadProgress({ current: 0, total: ready.length, errors: [] });
     const errors = [];
     for (let i = 0; i < ready.length; i++) {
       const file = ready[i];
       if (!file.preview) {
         errors.push(`"${file.originalName}": No image data`);
+        setUploadProgress((p) => ({ ...p, current: i + 1, errors: [...errors] }));
         continue;
       }
       try {
@@ -218,11 +223,14 @@ export default function GalleryAdmin() {
           category,
           featured,
         });
+        setUploadProgress((p) => ({ ...p, current: i + 1 }));
       } catch (error) {
         errors.push(`"${file.originalName}": ${error.message}`);
+        setUploadProgress((p) => ({ ...p, current: i + 1, errors: [...errors] }));
       }
     }
 
+    setUploading(false);
     if (errors.length > 0) {
       alert(`Upload completed with errors:\n${errors.join('\n')}`);
     }
@@ -372,20 +380,28 @@ export default function GalleryAdmin() {
         <div className="grid md:grid-cols-5 gap-6 mb-12">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="md:col-span-3">
             <div
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              className={`card cursor-pointer transition-all duration-200 min-h-[240px] flex flex-col items-center justify-center text-center ${
-                dragging ? 'border-2 border-[#FFE600] shadow-[0_0_24px_rgba(255,230,0,0.15)]' : 'border-2 border-dashed border-panel-border hover:border-[#FFE600] hover:shadow-[0_0_16px_rgba(255,230,0,0.08)]'
+              onDragOver={uploading ? null : handleDragOver}
+              onDragLeave={uploading ? null : handleDragLeave}
+              onDrop={uploading ? null : handleDrop}
+              onClick={uploading ? null : () => fileInputRef.current?.click()}
+              className={`card transition-all duration-200 min-h-[240px] flex flex-col items-center justify-center text-center ${
+                uploading
+                  ? 'opacity-50 cursor-not-allowed border-2 border-dashed border-panel-border'
+                  : dragging
+                    ? 'cursor-pointer border-2 border-[#FFE600] shadow-[0_0_24px_rgba(255,230,0,0.15)]'
+                    : 'cursor-pointer border-2 border-dashed border-panel-border hover:border-[#FFE600] hover:shadow-[0_0_16px_rgba(255,230,0,0.08)]'
               }`}
             >
               <div className={`text-5xl mb-4 transition-transform duration-200 ${dragging ? 'scale-110' : ''}`}>📁</div>
-              <p className="text-lg font-semibold text-accent dark:text-white mb-2">{dragging ? 'Drop files here' : 'Drop images here'}</p>
-              <p className="text-sm text-muted mb-4">or click to browse</p>
-              <span className="inline-block px-4 py-2 rounded-lg bg-accent/10 text-accent dark:text-[#FFE600] text-xs font-medium">Browse Files</span>
+              <p className="text-lg font-semibold text-accent dark:text-white mb-2">
+                {uploading ? 'Uploading...' : dragging ? 'Drop files here' : 'Drop images here'}
+              </p>
+              <p className="text-sm text-muted mb-4">{uploading ? 'Please wait' : 'or click to browse'}</p>
+              <span className="inline-block px-4 py-2 rounded-lg bg-accent/10 text-accent dark:text-[#FFE600] text-xs font-medium">
+                {uploading ? '⏳ Processing...' : 'Browse Files'}
+              </span>
               <p className="text-xs text-muted mt-4">PNG, JPG, WebP, GIF, AVIF &middot; up to 15MB each</p>
-              <input ref={fileInputRef} type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={handleFileSelect} className="hidden" />
+              <input ref={fileInputRef} type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={uploading ? null : handleFileSelect} className="hidden" />
             </div>
           </motion.div>
 
@@ -426,11 +442,11 @@ export default function GalleryAdmin() {
             <div className="card">
               <button
                 onClick={handleUpload}
-                disabled={files.length === 0 || uploadMutation.isPending}
+                disabled={files.length === 0 || uploading}
                 className="btn w-full text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {uploadMutation.isPending
-                  ? `⏳ ${t('galleryAdmin.uploading')}`
+                {uploading
+                  ? `⏳ Uploading ${uploadProgress.current}/${uploadProgress.total}`
                   : files.length > 0
                     ? `↑ ${t('galleryAdmin.uploadAll', { count: files.length })}`
                     : `↑ ${t('galleryAdmin.uploadAll', { count: 0 })}`}
@@ -453,7 +469,7 @@ export default function GalleryAdmin() {
                     <div className="w-20 h-20 rounded-xl overflow-hidden ring-1 ring-panel-border">
                       <img src={f.preview} alt={f.originalName} className="w-full h-full object-cover" />
                     </div>
-                    <button onClick={() => removeFile(f.id)} disabled={uploadMutation.isPending} className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center text-xs hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity shadow-md disabled:hidden">✕</button>
+                    <button onClick={() => removeFile(f.id)} disabled={uploading} className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center text-xs hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity shadow-md disabled:hidden">✕</button>
                     <p className="text-[9px] text-muted mt-1 max-w-20 truncate text-center">{f.originalName}</p>
                     {f.compressedSize && <p className="text-[8px] text-green-600 dark:text-green-400 text-center">{(f.compressedSize / 1024).toFixed(0)}KB</p>}
                   </motion.div>
@@ -525,6 +541,44 @@ export default function GalleryAdmin() {
           </div>
         )}
       </div>
+
+      {/* Upload Overlay */}
+      <AnimatePresence>
+        {uploading && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              className="bg-bg-app rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl text-center"
+            >
+              <div className="text-5xl mb-4">⏳</div>
+              <h3 className="text-lg font-bold mb-2">Uploading images</h3>
+              <p className="text-sm text-muted mb-6">
+                {uploadProgress.current} of {uploadProgress.total} complete
+              </p>
+              <div className="w-full h-2 rounded-full bg-accent/10 dark:bg-white/10 overflow-hidden mb-4">
+                <motion.div
+                  className="h-full rounded-full bg-[#FFE600]"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
+                  transition={{ duration: 0.3 }}
+                />
+              </div>
+              {uploadProgress.errors.length > 0 && (
+                <p className="text-xs text-red-400 mb-4">
+                  {uploadProgress.errors.length} error{uploadProgress.errors.length > 1 ? 's' : ''}
+                </p>
+              )}
+              <p className="text-xs text-muted">Please don't close this page</p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Edit Modal */}
       <AnimatePresence>
