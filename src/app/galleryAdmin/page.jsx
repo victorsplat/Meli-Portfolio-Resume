@@ -1,16 +1,19 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
 import { usePageTitle } from '@/lib/usePageTitle';
 import { useAuthStore } from '@/lib/stores/authStore';
 import { useGalleryStore } from '@/lib/stores/galleryStore';
 import { useGalleryImages, useUploadImage, useDeleteImage, useUpdateImage, useGallerySettings } from '@/hooks/useGallery';
+import { uploadFormSchema } from '@/lib/schemas/gallery';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import UploadOverlay from '@/components/ui/upload-overlay';
+import ImageEditModal from '@/components/ui/image-edit-modal';
 
 const MAX_FILES = 20;
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
@@ -25,7 +28,13 @@ export default function GalleryAdmin() {
   const [ready, setReady] = useState(false);
   useEffect(() => { setReady(true); }, []);
   const isAuthed = ready && !!token;
-  const { selectedImage, setSelectedImage } = useGalleryStore();
+  const {
+    selectedImage, setSelectedImage,
+    uploadFiles: files, setUploadFiles, addUploadFiles,
+    removeUploadFile, replaceUploadFile,
+    isUploading: uploading, setIsUploading: setUploading,
+    uploadProgress, setUploadProgress, resetUpload,
+  } = useGalleryStore();
 
   const { data: images = [], isLoading, refetch } = useGalleryImages();
   const { data: settings } = useGallerySettings();
@@ -39,10 +48,7 @@ export default function GalleryAdmin() {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [featured, setFeatured] = useState(false);
-  const [files, setFiles] = useState([]);
   const [dragging, setDragging] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, errors: [] });
   const fileInputRef = useRef(null);
   const passwordRef = useRef(null);
 
@@ -164,69 +170,67 @@ export default function GalleryAdmin() {
       alert(`Some files exceed 15MB:\n${oversized.map((f) => `- ${f.name} (${(f.size / 1024 / 1024).toFixed(1)}MB)`).join('\n')}`);
       return;
     }
-    const compressed = [];
+    const newFiles = [];
     for (const file of imagesOnly) {
-      const existing = files.find((f) => f.originalName === file.name);
-      if (existing) {
-        compressed.push(existing);
-        continue;
-      }
-      const id = `${Date.now()}-${compressed.length}`;
+      if (files.some((f) => f.originalName === file.name)) continue;
+      const id = `${Date.now()}-${newFiles.length}`;
       const url = URL.createObjectURL(file);
-      compressed.push({ id, originalName: file.name, preview: url, file, compressed: false });
+      newFiles.push({ id, originalName: file.name, preview: url, file, compressed: false, _isObjectUrl: true });
     }
-    setFiles((prev) => [...prev, ...compressed].slice(0, MAX_FILES));
+    addUploadFiles(newFiles);
   }
 
   async function compressPending() {
-    const updated = [...files];
-    let hasChanges = false;
-    for (let i = 0; i < updated.length; i++) {
-      if (!updated[i].compressed && updated[i].file) {
+    const errors = [];
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      if (!f.compressed && f.file) {
         try {
-          const result = await compressImage(updated[i].file);
-          updated[i] = { ...updated[i], ...result, compressed: true, file: null };
-          hasChanges = true;
+          const result = await compressImage(f.file);
+          replaceUploadFile(f.id, { ...result, compressed: true, file: null });
         } catch (err) {
-          alert(err.message);
-          return null;
+          errors.push(err.message);
+          removeUploadFile(f.id);
         }
       }
     }
-    if (hasChanges) setFiles(updated);
-    return updated;
-  }
-
-  function removeFile(id) {
-    setFiles((prev) => prev.filter((f) => f.id !== id));
+    if (errors.length > 0) alert(`Skipped files:\n${errors.join('\n')}`);
+    return files.filter((f) => !f.file || f.compressed);
   }
 
   async function handleUpload() {
+    const formResult = uploadFormSchema.safeParse({ title, description, category, featured });
+    if (!formResult.success) {
+      alert('Form validation: ' + formResult.error.errors.map((e) => e.message).join(', '));
+      return;
+    }
+    const { title: safeTitle, description: safeDesc, category: safeCat, featured: safeFeatured } = formResult.data;
+
     const ready = await compressPending();
     if (!ready || ready.length === 0) return;
 
     setUploading(true);
-    setUploadProgress({ current: 0, total: ready.length, errors: [] });
+    setUploadProgress(0, ready.length, []);
     const errors = [];
     for (let i = 0; i < ready.length; i++) {
       const file = ready[i];
       if (!file.preview) {
         errors.push(`"${file.originalName}": No image data`);
-        setUploadProgress((p) => ({ ...p, current: i + 1, errors: [...errors] }));
+        setUploadProgress(i + 1, ready.length, errors);
         continue;
       }
       try {
         await uploadMutation.mutateAsync({
           image: file.preview,
-          title,
-          description,
-          category,
-          featured,
+          title: safeTitle,
+          description: safeDesc,
+          category: safeCat,
+          featured: safeFeatured,
         });
-        setUploadProgress((p) => ({ ...p, current: i + 1 }));
+        setUploadProgress(i + 1, ready.length, errors);
       } catch (error) {
         errors.push(`"${file.originalName}": ${error.message}`);
-        setUploadProgress((p) => ({ ...p, current: i + 1, errors: [...errors] }));
+        setUploadProgress(i + 1, ready.length, errors);
       }
     }
 
@@ -234,86 +238,7 @@ export default function GalleryAdmin() {
     if (errors.length > 0) {
       alert(`Upload completed with errors:\n${errors.join('\n')}`);
     }
-    setFiles([]);
-  }
-
-  const [editTitle, setEditTitle] = useState({ en: '', es: '', pt: '' });
-  const [editDesc, setEditDesc] = useState({ en: '', es: '', pt: '' });
-  const [editCategory, setEditCategory] = useState('');
-  const [editFeatured, setEditFeatured] = useState(false);
-  const [translatingImg, setTranslatingImg] = useState(false);
-
-  useEffect(() => {
-    if (selectedImage) {
-      const t = selectedImage.title || {};
-      const d = selectedImage.description || {};
-      setEditTitle({ en: t.en || '', es: t.es || '', pt: t.pt || '' });
-      setEditDesc({ en: d.en || '', es: d.es || '', pt: d.pt || '' });
-      setEditCategory(selectedImage.category || '');
-      setEditFeatured(selectedImage.featured || false);
-    }
-  }, [selectedImage]);
-
-  async function handleAutoTranslateImg() {
-    const enTitle = editTitle.en?.trim();
-    const enDesc = editDesc.en?.trim();
-    if (!enTitle && !enDesc) return;
-    setTranslatingImg(true);
-    try {
-      if (enTitle) {
-        const res1 = await fetch('https://libretranslate.com/translate', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ q: enTitle, source: 'en', target: 'es', format: 'text' }),
-        });
-        const es = res1.ok ? (await res1.json()).translatedText || '' : '';
-        const res2 = await fetch('https://libretranslate.com/translate', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ q: enTitle, source: 'en', target: 'pt', format: 'text' }),
-        });
-        const pt = res2.ok ? (await res2.json()).translatedText || '' : '';
-        setEditTitle(prev => ({ ...prev, es, pt }));
-      }
-      if (enDesc) {
-        const res1 = await fetch('https://libretranslate.com/translate', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ q: enDesc, source: 'en', target: 'es', format: 'text' }),
-        });
-        const es = res1.ok ? (await res1.json()).translatedText || '' : '';
-        const res2 = await fetch('https://libretranslate.com/translate', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ q: enDesc, source: 'en', target: 'pt', format: 'text' }),
-        });
-        const pt = res2.ok ? (await res2.json()).translatedText || '' : '';
-        setEditDesc(prev => ({ ...prev, es, pt }));
-      }
-    } catch {}
-    setTranslatingImg(false);
-  }
-
-  async function handleUpdate() {
-    if (!selectedImage) return;
-    try {
-      await updateMutation.mutateAsync({
-        id: selectedImage._id,
-        title: editTitle,
-        description: editDesc,
-        category: editCategory,
-        featured: editFeatured,
-      });
-      setSelectedImage(null);
-    } catch (error) {
-      alert('Failed to update: ' + error.message);
-    }
-  }
-
-  async function handleDelete(id) {
-    if (!confirm(t('galleryAdmin.deleteConfirm'))) return;
-    try {
-      await deleteMutation.mutateAsync(id);
-      setSelectedImage(null);
-    } catch (error) {
-      console.error('Error deleting:', error);
-    }
+    resetUpload();
   }
 
   if (!ready) {
@@ -469,7 +394,7 @@ export default function GalleryAdmin() {
                     <div className="w-20 h-20 rounded-xl overflow-hidden ring-1 ring-panel-border">
                       <img src={f.preview} alt={f.originalName} className="w-full h-full object-cover" />
                     </div>
-                    <button onClick={() => removeFile(f.id)} disabled={uploading} className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center text-xs hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity shadow-md disabled:hidden">✕</button>
+                    <button onClick={() => removeUploadFile(f.id)} disabled={uploading} className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center text-xs hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity shadow-md disabled:hidden">✕</button>
                     <p className="text-[9px] text-muted mt-1 max-w-20 truncate text-center">{f.originalName}</p>
                     {f.compressedSize && <p className="text-[8px] text-green-600 dark:text-green-400 text-center">{(f.compressedSize / 1024).toFixed(0)}KB</p>}
                   </motion.div>
@@ -542,172 +467,23 @@ export default function GalleryAdmin() {
         )}
       </div>
 
-      {/* Upload Overlay */}
-      <AnimatePresence>
-        {uploading && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm"
-          >
-            <motion.div
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              className="bg-bg-app rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl text-center"
-            >
-              <div className="text-5xl mb-4">⏳</div>
-              <h3 className="text-lg font-bold mb-2">Uploading images</h3>
-              <p className="text-sm text-muted mb-6">
-                {uploadProgress.current} of {uploadProgress.total} complete
-              </p>
-              <div className="w-full h-2 rounded-full bg-accent/10 dark:bg-white/10 overflow-hidden mb-4">
-                <motion.div
-                  className="h-full rounded-full bg-[#FFE600]"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
-                  transition={{ duration: 0.3 }}
-                />
-              </div>
-              {uploadProgress.errors.length > 0 && (
-                <p className="text-xs text-red-400 mb-4">
-                  {uploadProgress.errors.length} error{uploadProgress.errors.length > 1 ? 's' : ''}
-                </p>
-              )}
-              <p className="text-xs text-muted">Please don't close this page</p>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <UploadOverlay uploading={uploading} progress={uploadProgress} />
 
-      {/* Edit Modal */}
-      <AnimatePresence>
-        {selectedImage && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
-            onClick={() => setSelectedImage(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="relative max-w-2xl w-full bg-bg-app rounded-2xl shadow-2xl overflow-hidden"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={() => setSelectedImage(null)}
-                className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-black/30 text-white/70 hover:text-white hover:bg-black/50 transition z-10"
-              >
-                ✕
-              </button>
-
-              <div className="flex flex-col md:flex-row">
-                {/* Image preview */}
-                <div className="md:w-1/2 bg-black/20 flex items-center justify-center p-4">
-                  <img
-                    src={selectedImage.url}
-                    alt={selectedImage.title || ''}
-                    className="w-full h-auto max-h-[50vh] md:max-h-[60vh] object-contain rounded-lg"
-                  />
-                </div>
-
-                {/* Edit fields */}
-                <div className="md:w-1/2 p-5 space-y-4">
-                  <h2 className="text-lg font-bold text-accent dark:text-white">Edit Image</h2>
-
-                  <div>
-                    <label className="block text-xs font-medium text-muted mb-1">Title</label>
-                    {['en', 'es', 'pt'].map(l => (
-                      <div key={l} className="flex items-center gap-2 mb-1 last:mb-0">
-                        <span className="text-xs w-8 flex-shrink-0">{{ en: '🇺🇸', es: '🇦🇷', pt: '🇧🇷' }[l]}</span>
-                        <input
-                          type="text"
-                          value={editTitle[l] || ''}
-                          onChange={(e) => setEditTitle(prev => ({ ...prev, [l]: e.target.value }))}
-                          placeholder={`Title (${l})`}
-                          className="input text-sm flex-1"
-                        />
-                      </div>
-                    ))}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-muted mb-1">Description</label>
-                    {['en', 'es', 'pt'].map(l => (
-                      <div key={l} className="flex items-start gap-2 mb-1 last:mb-0">
-                        <span className="text-xs w-8 flex-shrink-0 mt-2">{{ en: '🇺🇸', es: '🇦🇷', pt: '🇧🇷' }[l]}</span>
-                        <textarea
-                          value={editDesc[l] || ''}
-                          onChange={(e) => setEditDesc(prev => ({ ...prev, [l]: e.target.value }))}
-                          placeholder={`Description (${l})`}
-                          className="input text-sm flex-1 min-h-[50px] resize-none"
-                          rows={2}
-                        />
-                      </div>
-                    ))}
-                    <button
-                      onClick={handleAutoTranslateImg}
-                      disabled={translatingImg || !editTitle.en?.trim()}
-                      className="mt-1 text-xs text-accent dark:text-[#FFE600] hover:underline disabled:opacity-30"
-                    >
-                      {translatingImg ? '🔄 ...' : '🤖 EN → ES, PT'}
-                    </button>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-muted mb-1">Category</label>
-                    <select
-                      value={editCategory}
-                      onChange={(e) => setEditCategory(e.target.value)}
-                      className="input text-sm w-full"
-                    >
-                      {categories.map((cat) => {
-                        const count = imageCountByCategory[cat.id] || 0;
-                        return (
-                          <option key={cat.id} value={cat.id}>
-                            {cat.emoji} {cat.name?.en || cat.id} ({count})
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </div>
-
-                  <label className="flex items-center gap-3 cursor-pointer pt-1">
-                    <input
-                      type="checkbox"
-                      checked={editFeatured}
-                      onChange={(e) => setEditFeatured(e.target.checked)}
-                      className="w-4 h-4 rounded border-panel-border accent-[#FFE600]"
-                    />
-                    <span className="text-sm font-medium text-muted">Mark as featured</span>
-                  </label>
-
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      onClick={handleUpdate}
-                      disabled={updateMutation.isPending}
-                      className="flex-1"
-                    >
-                      {updateMutation.isPending ? 'Saving...' : '💾 Save'}
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      onClick={() => handleDelete(selectedImage._id)}
-                      disabled={deleteMutation.isPending}
-                      className="flex-shrink-0"
-                    >
-                      {deleteMutation.isPending ? '...' : '🗑 Delete'}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <ImageEditModal
+        image={selectedImage}
+        onClose={() => setSelectedImage(null)}
+        onSave={async ({ title, description, category, featured }) => {
+          await updateMutation.mutateAsync({ id: selectedImage._id, title, description, category, featured });
+          setSelectedImage(null);
+        }}
+        onDelete={async (id) => {
+          if (!confirm(t('galleryAdmin.deleteConfirm'))) return;
+          await deleteMutation.mutateAsync(id);
+          setSelectedImage(null);
+        }}
+        categories={categories}
+        imageCountByCategory={imageCountByCategory}
+      />
     </div>
   );
 }

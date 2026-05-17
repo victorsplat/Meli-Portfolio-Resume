@@ -43,6 +43,13 @@ export const gallerySettingsSchema = z.object({
   }),
 });
 
+export const uploadFormSchema = z.object({
+  title: z.string().max(200).default(''),
+  description: z.string().max(1000).default(''),
+  category: z.string().min(1, 'Category is required'),
+  featured: z.boolean().default(false),
+});
+
 export const contactFormSchema = z.object({
   name: z.string().min(1).max(100),
   email: z.string().email().max(200),
