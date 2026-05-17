@@ -130,3 +130,20 @@ GALLERY_RW_TOKEN_READ_WRITE_TOKEN=vercel_blob_rw_pnsJoE0Xley6PaKk_xgk0jAOnsyYk3p
 - **`gallery/page.jsx`** — Refactored to use `useGalleryImages` + `useGallerySettings`. Hero title/subtitle come from settings with i18n fallback.
 - **`i18n.js`** — Removed all `categoryDesign`/`categoryAboutMe`/`categorySkate`/`categoryDrinks`/`categoryFood`/`categoryOthers` translation keys from all 3 languages (now supplied by settings categories).
 - **Backwards compatibility**: `gallerySettingsSchema.categories` is optional (defaults to `{ items: [] }`), so old settings docs without categories won't crash. `useGallerySettings` fallbacks to raw data if Zod parse fails.
+
+## Session History
+
+### May 16 — Storage Dashboard, Blob Migration, Private Blob Proxy, Refactor
+- **Storage tab** (`galleryAdmin/dashboard`): Per-image base64→Blob migration UI with "Migrate All" button, progress tracking, states (loading/done/error)
+- **`POST /api/gallery/migrate`**: Migrates single image from base64 to Vercel Blob (private)
+- **`GET /api/gallery/proxy`**: Proxies private Blob images with `Authorization: Bearer <token>` header
+- **`src/lib/blob.js`**: Shared helpers `uploadToBlob()` (private) and `getSignedUrl()` (converts private blob URLs → proxy path)
+- **All blob access switched to private**: `put()` with `{ access: 'private' }`. GET returns proxy URLs
+- **3 new components**: `ImageEditModal`, `UploadOverlay`, `upload-form-schema` in Zod
+- **Zustand migration**: Upload state (`files`, `uploading`, `progress`) → `galleryStore`. Added `addUploadFiles`, `replaceUploadFile`, `removeUploadFile` with built-in `revokeObjectURL`
+- **Zod validation**: `uploadFormSchema` validates form before upload
+- **Bug fixes**: memory leak (revokeObjectURL), compressPending resilience, await-in-setState fix, CircularGallery duplicate key
+
+### Tomorrow (May 17) — Tests + Sentry
+- Test gallery: hero, explore (scroll/touch), admin (upload/edit/delete/migrate), dashboard (tabs, categories, storage)
+- Set up Sentry for error tracking (Next.js SDK)
