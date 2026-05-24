@@ -37,7 +37,7 @@ src/
 │   ├── i18n.js            — Translations (en/es/pt)
 │   ├── useTheme.js        — Theme toggle + localStorage (reads DOM class on init)
 │   ├── usePageTitle.js
-│   ├── mongodb.js         — MongoDB client singleton
+│   ├── mongodb.js         — MongoDB client singleton (lazy-init pattern)
 │   ├── auth.js            — Bearer token admin auth
 │   ├── validate.js        — Server-side validation (CPF, email, phone, CEP, image, application)
 │   └── rateLimit.js       — 20 req/min per IP rate limiter
@@ -53,7 +53,7 @@ src/
 2. **i18n** — EN/ES/PT with language switcher in hero and page headers
 3. **Gallery** — MongoDB-backed image gallery with admin upload/delete (Bearer token auth)
 4. **Security** — Admin auth (`ADMIN_API_KEY`), rate limiting (20/min), input sanitization, CPF/CEP/email validation
-5. **IT Case Form** — Application form with auto-formatting (CPF: `000.000.000-00`, phone: `(11) 99999-9999`, CEP: `00000-000`), field-level format warnings, birthDate with age validation, PCD deficiency conditional field
+5. **IT Case Form** — Application form with auto-formatting (CPF, phone, CEP), field-level format warnings, birthDate with age validation, PCD deficiency conditional field
 6. **Animations** — Staggered entrance, card hover lift, skeleton loading, dot pattern parallax, hero typewriter
 
 ## Notable CSS Variables (styles.css)
@@ -62,39 +62,26 @@ src/
 - `--bg-hero`: `#ebebed` (light), `#121b29` (dark)
 - `--text-main`: `#111827` (light), `#f9fafb` (dark)
 
-## Session History (May 10 2026)
+## OpenCode Configuration
 
-### What was done on May 10
-- **Client-side image compression** (`galleryAdmin/page.jsx`): Canvas resizes to max 1200px, JPEG q0.8 before upload — avoids Vercel's 4.5MB body limit and MongoDB's 16MB doc limit
-- **Sharp server-side re-encoding** (`api/gallery/route.js`): Re-encodes uploaded images to WebP q80 for efficient storage. Wrapped in try-catch — falls back to original client-compressed JPEG if Sharp fails
-- **Error logging improved**: Both GET/POST routes now return `error.name: error.message` instead of generic messages, making debugging easier
-- **Gallery GET resilience**: Handles documents with missing/null `url` field without crashing
-- **Root cause of TLS error (`alert 80`)**: Vercel serverless IP not whitelisted in MongoDB Atlas. Fixed by adding `0.0.0.0/0` to Atlas Network Access.
-- **Security**: `.env.local` removed from git tracking; `.gitignore` updated from `.env` to `.env*`
+Providers defined in global config (`~/.config/opencode/opencode.jsonc`):
+- **Gemini** — Direct access via Google AI Studio (free tier)
+- **OpenRouter** — Router with BYOK + free model access
 
-### What was done on May 11
-- **Gallery page redesign**: MELI-branded hero with featured image, stats bar, "About My Work" glass card story section, category filter pills (MELI yellow active), varied aspect-ratio grid (`4/3`, `3/4`, `16/9`, `square`)
-- **Gallery CMS Dashboard** (`/galleryAdmin/dashboard`): Edit Hero, About Me, Footer content in EN/ES/PT with 3-column layout. Free auto-translate via LibreTranslate public API (no key needed). Admin-protected with same Bearer token auth.
-- **Settings API** (`/api/gallery/settings`): GET/PUT for gallery content stored in MongoDB `gallery.settings` collection (single doc, upsert pattern)
-- **Multi-file upload**: Admin supports up to 20 simultaneous uploads with sequential progress bar, per-file error collection
-- **New categories**: `design`, `about-me`, `skate`, `drinks`, `food`, `others` (removed `photography`, `development`, `other`)
-- **i18n improvements**: `t()` function now supports `{param}` interpolation for progress display; rate limit text properly translated
-- **GalleryLightbox**: Shows category emoji + label overlay, featured badge on featured images
-- **Bug fixes**: Hero image visibility for cached images (init `heroLoaded: true`); About section always visible with i18n fallback; Dashboard error state with retry on failed settings fetch
-- **Lint**: Added `Buffer`/`Image` globals to eslint config; removed unused `PageHeader` import from gallery page; removed unused `authChecking` state from dashboard
-- **Vercel build fix**: Refactored `mongodb.js` to lazy-init pattern — MongoDB connection no longer fires at module import time (was causing `Failed to collect page data for /api/applications` during build). Updated all 3 API routes to use the lazy getter.
+Agents defined in project `opencode.json`:
+| Agent | Model | Purpose |
+|-------|-------|---------|
+| `plan` (primary) | DeepSeek R1 (OR) | Architecture planning, Tab-switchable |
+| `fast` (subagent) | Gemini 2.5 Flash | Quick tasks: i18n, debug, questions. Invoke with `@fast` |
+| `explore` (subagent) | Gemini 2.5 Flash | Read-only code search. Invoke with `@explore` |
 
-### Pending / Known Issues
-- Gallery stores images as base64 in MongoDB — works but suboptimal. Migrated to Vercel Blob for new uploads (see May 12).
+## Environment Variables (.env.local)
+Required in Vercel dashboard → Environment Variables:
+- `MONGODB_URI` — MongoDB Atlas connection string
+- `ADMIN_API_KEY` — Bearer token for gallery admin auth
+- `BLOB_READ_WRITE_TOKEN` — Vercel Blob token for image storage
 
-## Environment Variables (.env.local — NOT in git)
-```
-MONGODB_URI=mongodb+srv://victorsplat_db:44112841Pan@cluster0.aqnrrlq.mongodb.net/?appName=Cluster0
-ADMIN_API_KEY=meli-admin-2024-secure-key
-BLOB_READ_WRITE_TOKEN=your_vercel_blob_token_here
-GALLERY_RW_TOKEN_READ_WRITE_TOKEN=vercel_blob_rw_pnsJoE0Xley6PaKk_xgk0jAOnsyYk3pT8cUYFwJYV84R7aH
-```
-> `MONGODB_URI`, `ADMIN_API_KEY`, and `BLOB_READ_WRITE_TOKEN` must be set manually in Vercel dashboard → Environment Variables. `.env.local` is gitignored and not loaded by Vercel.
+> `.env.local` is gitignored and not loaded by Vercel.
 
 ## Known Vercel/Deployment Constraints
 - **Vercel ignores `.env.local`** — all secrets must be set in Vercel dashboard
@@ -102,48 +89,74 @@ GALLERY_RW_TOKEN_READ_WRITE_TOKEN=vercel_blob_rw_pnsJoE0Xley6PaKk_xgk0jAOnsyYk3p
 - **Client-side Canvas compression** (2000px max, JPEG q0.85) keeps payload under Vercel's 4.5MB serverless body limit
 - **Vercel Blob** (`@vercel/blob`) used for image storage — old base64 images in MongoDB remain accessible
 
+## Architecture Decisions
+
+### Image Storage
+- Client-side Canvas compression (2000px, JPEG q0.85) before upload
+- New uploads → Vercel Blob (private) via `@vercel/blob` `put()`
+- Fallback: Sharp WebP re-encode into MongoDB base64
+- DELETE also cleans up Blob when URL is a blob URL
+
+### Database
+- MongoDB client uses lazy-init pattern (no connection at import time)
+- Gallery settings stored as single document in `gallery.settings` collection (upsert)
+- Rate limiter: 20 req/min per IP via in-memory Map
+
+### Dynamic Categories
+- Categories stored in `settings.categories.items` in MongoDB
+- CRUD via dashboard (add/edit/delete/reorder with emoji + i18n names)
+- No code changes needed to add categories — loaded from settings at runtime
+
+### Admin Auth
+- Zustand store with `persist` middleware (`gallery_admin_token` localStorage key)
+- Bearer token auth via `ADMIN_API_KEY` env var
+- Centralized `getAuthHeaders()` across admin pages
+
 ## Session History
+
+### May 10
+- Client-side image compression (Canvas, 1200px, JPEG q0.8)
+- Sharp server-side re-encoding to WebP q80 with try-catch fallback
+- Error logging improved (returns `error.name: error.message`)
+- Gallery GET resilience for missing/null `url` field
+- TLS error fix: `0.0.0.0/0` in Atlas Network Access
+- `.gitignore` updated from `.env` to `.env*`
+
+### May 11
+- Gallery page redesign: MELI-branded hero, featured image, stats bar, glass card story section
+- Category filter pills (MELI yellow active), varied aspect-ratio grid
+- Gallery CMS Dashboard: Edit Hero/About/Footer in EN/ES/PT with LibreTranslate
+- Settings API: GET/PUT for `gallery.settings` collection
+- Multi-file upload: sequential progress bar, per-file error collection
+- i18n `t()` now supports `{param}` interpolation
+- Bug fixes: hero visibility, about fallback, dashboard error state
 
 ### May 12 — Vercel Blob Migration + Admin UI Redesign
-- **Image storage migration**: New `POST /api/gallery` uploads to Vercel Blob via `@vercel/blob` `put()` instead of storing base64 in MongoDB. MongoDB now stores only the Blob URL + metadata (tiny docs, no 16MB limit).
-- **Sharp fallback preserved**: If `BLOB_READ_WRITE_TOKEN` is not set or Blob upload fails, falls back to Sharp WebP re-encoding into MongoDB base64 (existing behavior).
-- **Blob cleanup on delete**: `DELETE /api/gallery` now also removes the image from Vercel Blob when the URL is a blob URL.
-- **Admin page redesigned** (`galleryAdmin/page.jsx`): Modern drag-and-drop upload zone, two-column layout (drop zone left, metadata right), glassmorphism styling matching gallery aesthetic, selected files thumbnail strip with per-file remove. Updated color scheme with MELI yellow accents.
-- **Higher quality compression**: Client-side Canvas compression increased to 2000px max, JPEG q0.85 (was 1200px, q0.8).
-- **15MB file limit**: `MAX_IMAGE_SIZE` increased from 10MB to 15MB in `validate.js` and all i18n translations.
-- **Sharp removed from imports but kept in dependencies** as fallback for base64 storage path.
-- **`@vercel/blob` v2.3.3** added to dependencies.
-- **Lint clean**: Removed unused `useCallback` import from admin page.
+- New uploads stored in Vercel Blob instead of MongoDB base64
+- Sharp fallback preserved if Blob unavailable
+- Blob cleanup on DELETE
+- Admin page: drag-and-drop upload, two-column layout, glassmorphism
+- Compression increased to 2000px, JPEG q0.85
+- 15MB file limit
 
 ### May 16 — Dynamic Categories + Zustand + Zod + TanStack Query Refactor
-- **New libs**: `zustand` and `zod` installed. `@tanstack/react-query` and `axios` were already present.
-- **`src/lib/schemas/gallery.js`** — Zod schemas for gallery images, settings, categories, and contact form. `DEFAULT_CATEGORIES` exported as fallback.
-- **`src/lib/stores/authStore.js`** — Zustand auth with `persist` middleware (same `gallery_admin_token` localStorage key). Centralizes login/logout/getAuthHeaders across admin pages. Eliminates duplicated auth logic.
-- **`src/lib/stores/galleryStore.js`** — Zustand store for gallery UI state (selected image, upload files/progress).
-- **`src/hooks/useGallery.js`** — TanStack Query hooks: `useGalleryImages`, `useGallerySettings`, `useUploadImage`, `useDeleteImage`, `useUpdateSettings`, `useSubmitContact`. All mutations auto-invalidate relevant queries on success.
-- **Dynamic categories**: Categories moved from hardcoded arrays + i18n keys to `settings.categories.items` in MongoDB. Managed via dashboard CRUD (add/edit/delete/reorder with emoji + i18n names). No code changes or page reloads needed to add new categories.
-- **`api/gallery/settings/route.js`** — `DEFAULT_SETTINGS` now includes `categories.items` with 6 default categories. `sanitizeSettings` handles category sanitization.
-- **`api/gallery/route.js`** — POST validation now reads valid categories from settings instead of hardcoded array. Removed duplicate `getClient()` call.
-- **`galleryAdmin/dashboard/page.jsx`** — Rewritten to use Zustand auth + TanStack hooks. New Categories section with add/edit/delete/reorder. Each category: slug, emoji, name in EN/ES/PT.
-- **`galleryAdmin/page.jsx`** — Refactored to use `useAuthStore`, `useGalleryImages`, `useGallerySettings`, `useUploadImage`, `useDeleteImage`. Category dropdown loads from settings dynamically. Image cards show category name via `getCategoryName()`.
-- **`gallery/explore/page.jsx`** — Refactored to use `useGalleryImages` + `useGallerySettings`. Category filters read from settings (emoji + name per language) instead of hardcoded `categoryMeta`.
-- **`gallery/page.jsx`** — Refactored to use `useGalleryImages` + `useGallerySettings`. Hero title/subtitle come from settings with i18n fallback.
-- **`i18n.js`** — Removed all `categoryDesign`/`categoryAboutMe`/`categorySkate`/`categoryDrinks`/`categoryFood`/`categoryOthers` translation keys from all 3 languages (now supplied by settings categories).
-- **Backwards compatibility**: `gallerySettingsSchema.categories` is optional (defaults to `{ items: [] }`), so old settings docs without categories won't crash. `useGallerySettings` fallbacks to raw data if Zod parse fails.
+- `zustand`, `zod` installed. `@tanstack/react-query`, `axios` already present.
+- Zod schemas for gallery images, settings, categories, contact
+- Zustand auth store centralizes login/logout/getAuthHeaders
+- Zustand gallery store for UI state (files, progress)
+- TanStack Query hooks: `useGalleryImages`, `useUploadImage`, `useDeleteImage`, `useUpdateSettings`, `useSubmitContact`
+- Dynamic categories via `settings.categories.items` — CRUD in dashboard
+- All gallery pages refactored to use hooks instead of hardcoded state
+- Backwards compatibility for old settings docs without categories
 
-## Session History
+### May 16 (late) — Storage Dashboard, Private Blob Proxy
+- Storage tab in dashboard: base64→Blob migration UI per image
+- `POST /api/gallery/migrate`: single image migration to private Blob
+- `GET /api/gallery/proxy`: proxy for private Blob images
+- `src/lib/blob.js`: shared helpers `uploadToBlob()`, `getSignedUrl()`
+- `ImageEditModal`, `UploadOverlay`, upload-form-schema in Zod
+- Bug fixes: memory leak (revokeObjectURL), compressPending resilience, CircularGallery duplicate key
 
-### May 16 — Storage Dashboard, Blob Migration, Private Blob Proxy, Refactor
-- **Storage tab** (`galleryAdmin/dashboard`): Per-image base64→Blob migration UI with "Migrate All" button, progress tracking, states (loading/done/error)
-- **`POST /api/gallery/migrate`**: Migrates single image from base64 to Vercel Blob (private)
-- **`GET /api/gallery/proxy`**: Proxies private Blob images with `Authorization: Bearer <token>` header
-- **`src/lib/blob.js`**: Shared helpers `uploadToBlob()` (private) and `getSignedUrl()` (converts private blob URLs → proxy path)
-- **All blob access switched to private**: `put()` with `{ access: 'private' }`. GET returns proxy URLs
-- **3 new components**: `ImageEditModal`, `UploadOverlay`, `upload-form-schema` in Zod
-- **Zustand migration**: Upload state (`files`, `uploading`, `progress`) → `galleryStore`. Added `addUploadFiles`, `replaceUploadFile`, `removeUploadFile` with built-in `revokeObjectURL`
-- **Zod validation**: `uploadFormSchema` validates form before upload
-- **Bug fixes**: memory leak (revokeObjectURL), compressPending resilience, await-in-setState fix, CircularGallery duplicate key
-
-### Tomorrow (May 17) — Tests + Sentry
-- Test gallery: hero, explore (scroll/touch), admin (upload/edit/delete/migrate), dashboard (tabs, categories, storage)
+### May 17 — Planned: Tests + Sentry
+- Test gallery: hero, explore, admin, dashboard
 - Set up Sentry for error tracking (Next.js SDK)

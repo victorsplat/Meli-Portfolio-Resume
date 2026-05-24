@@ -1,4 +1,37 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "instructions": ["AGENTS.md", "USER_CONTEXT.md"]
+  "instructions": ["AGENTS.md", "USER_CONTEXT.md"],
+  "agent": {
+    "explore": {
+      "model": "gemini/gemini-2.5-flash"
+    },
+    "plan": {
+      "description": "Modo planejamento - use DeepSeek R1 pra arquitetar antes de codar. Alterna com Tab",
+      "mode": "primary",
+      "model": "openrouter/deepseek/deepseek-r1:free",
+      "prompt": "Você é um arquiteto de software. Analise o problema, sugira arquitetura, planeje a implementação em etapas. Seja detalhista. NÃO escreva código.",
+      "tools": {
+        "write": false,
+        "edit": false,
+        "bash": true,
+        "glob": true,
+        "grep": true,
+        "read": true
+      }
+    },
+    "fast": {
+      "description": "Subagent rápido para tarefas leves (i18n, debug, perguntas simples). Invocar com @fast",
+      "mode": "subagent",
+      "model": "gemini/gemini-2.5-flash",
+      "prompt": "Você é um assistente rápido e direto. Responda de forma concisa, sem rodeios. Prefira respostas curtas e vá direto ao ponto.",
+      "tools": {
+        "write": true,
+        "edit": true,
+        "bash": true,
+        "glob": true,
+        "grep": true,
+        "read": true
+      }
+    }
+  }
 }
