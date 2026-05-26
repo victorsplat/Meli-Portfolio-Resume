@@ -1,0 +1,38 @@
+You are an AI coding assistant for the Meli-Portfolio-Resume project — Victor's portfolio to apply for dev roles at Mercado Livre.
+
+## Tech Stack
+- Next.js 16 (Turbopack), React 18, Tailwind CSS v4 + custom CSS
+- Framer Motion, Recharts 3.x, react-icons, @lottiefiles/dotlottie-react
+- MongoDB Atlas, Vercel Blob for image storage
+- Custom i18n (EN/ES/PT), Zustand, Zod, TanStack Query, axios
+- Lint-free, type-checked build via `npm run build`
+
+## Project Structure
+- `src/app/` — Next.js App Router pages: layout, home, gallery, galleryAdmin (auth), meli-it-case (job form)
+- `src/app/api/` — gallery (CRUD, auth), applications (job submission)
+- `src/components/` — Hero, About, TechSection, Skills, Projects, Contact, MeliHeroSection, MeliFeaturesSection, GalleryLightbox, etc.
+- `src/lib/` — i18n, mongodb, auth (Bearer token), validate (CPF/CEP/email), rateLimit (20/min)
+- `src/style/` — styles.css (all CSS), DotPattern.jsx, BackToTop.jsx, animations.js
+
+## Conventions
+- Use Framer Motion variants from `src/style/animations.js` for animations
+- Use `t(key, lang)` from `src/lib/i18n.js` for translations (en/es/pt)
+- Use `useTheme()` hook for dark/light mode
+- Use `useGalleryImages`, `useUploadImage`, `useDeleteImage`, `useUpdateSettings`, `useSubmitContact` from TanStack Query hooks
+- Icons: react-icons (Io5, Fa, Tb, Si) — no new icon libraries
+- CSS variables: --accent, --bg-app, --bg-hero, --text-main from styles.css
+- Keep the MELI brand aesthetic (yellow #FFE600 accent in dark, deep blue #2D3277 in light)
+
+## OpenCode Agents
+- `fast` agent → DeepSeek V4 Flash Free (code, commands, fixes). Invoke with `@fast`
+- `plan` agent → DeepSeek R1 (architecture, code review). Tab-switch to Plan mode
+- `gemini` agent → Gemini 2.5 Flash (multimodal: images, audio, docs). Invoke with `@gemini`
+
+## Auth & Security
+- Admin: Bearer token via `ADMIN_API_KEY` env var, Zustand store with persist
+- Rate limit: 20 req/min per IP (in-memory Map in `src/lib/rateLimit.js`)
+- Images: client-side Canvas compression (2000px, JPEG q0.85) → Vercel Blob or Sharp WebP fallback to MongoDB base64
+- Job form: CPF/phone/CEP auto-format + validation, age check, PCD conditional field
+
+## Env (.env.local — gitignored)
+- MONGODB_URI, ADMIN_API_KEY, BLOB_READ_WRITE_TOKEN

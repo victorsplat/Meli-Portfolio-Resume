@@ -11,18 +11,13 @@ export const useAuthStore = create(
       token: null,
 
       login: async (password) => {
-        const res = await fetch('/api/gallery', {
+        const res = await fetch('/api/gallery/auth', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${password}`,
-          },
-          body: JSON.stringify({ image: '', title: '', description: '' }),
+          headers: { Authorization: `Bearer ${password}` },
         });
 
-        if (res.status === 401 || res.status === 403) {
-          return false;
-        }
+        if (res.status === 401 || res.status === 403) return false;
+        if (!res.ok) throw new Error('Auth service unavailable');
 
         set({ token: password });
         return true;

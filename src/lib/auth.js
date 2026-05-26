@@ -20,10 +20,3 @@ export function requireAdmin(request) {
   return { authorized: true };
 }
 
-export function generateAdminToken() {
-  if (typeof window !== 'undefined') {
-    const key = process.env.NEXT_PUBLIC_ADMIN_KEY || 'admin';
-    return key;
-  }
-  return process.env.ADMIN_API_KEY || '';
-}

@@ -107,7 +107,7 @@ export async function POST(request) {
       }
       const buffer = Buffer.from(base64Data, 'base64');
 
-      if (process.env.GALLERY_RW_TOKEN_READ_WRITE_TOKEN) {
+      if (process.env.BLOB_READ_WRITE_TOKEN) {
         try {
           const ext = image.match(/image\/(\w+)/)?.[1] || 'jpeg';
           const filename = `gallery/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
@@ -248,7 +248,7 @@ export async function DELETE(request) {
 
     const existing = await collection.findOne({ _id: new ObjectId(id) });
 
-    if (existing?.url && existing.url.startsWith('https://') && process.env.GALLERY_RW_TOKEN_READ_WRITE_TOKEN) {
+    if (existing?.url && existing.url.startsWith('https://') && process.env.BLOB_READ_WRITE_TOKEN) {
       try {
         const { del } = await import('@vercel/blob');
         await del(existing.url);

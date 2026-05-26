@@ -1,14 +1,57 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "instructions": ["AGENTS.md", "USER_CONTEXT.md"],
+  "mcp": {
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp"
+    }
+  },
+  "command": {
+    "build": {
+      "template": "Rode npm run build e me mostre o output. Se houver erros, corrija um por um.",
+      "description": "Build do projeto Next.js",
+      "agent": "fast"
+    },
+    "dev": {
+      "template": "Rode npm run dev em background e confirme que o servidor iniciou.",
+      "description": "Dev server com Turbopack",
+      "agent": "fast"
+    },
+    "lint": {
+      "template": "Rode npm run lint e me mostre o output. Corrija qualquer erro que aparecer.",
+      "description": "Verifica lint do projeto",
+      "agent": "fast"
+    },
+    "deploy": {
+      "template": "Execute a sequência de deploy:\n1) npm run build (se falhar, corrija antes de prosseguir)\n2) git add -A\n3) Peça pra mim a mensagem de commit antes de finalizar — use conventional commits: feat:, fix:, refactor:, docs:, style:, chore:\n4) git push\n5) Me avise quando terminar.",
+      "description": "Build → commit (conventional) → push (deploy Vercel)",
+      "agent": "fast"
+    },
+    "review": {
+      "template": "Revise o código fornecido. Analise: arquitetura, boas práticas, performance, segurança, tratamento de erros, legibilidade. Sugira melhorias específicas.",
+      "description": "Code review profundo",
+      "agent": "plan"
+    },
+    "think": {
+      "template": "Analise o problema com raciocínio máximo. Pense passo a passo, considere edge cases, tradeoffs, arquitetura, e só então responda de forma completa.",
+      "description": "DeepSeek V4 Flash em modo max (raciocínio máximo)",
+      "agent": "think"
+    },
+    "analyze": {
+      "template": "Analise o arquivo ou conteúdo fornecido usando suas capacidades multimodais. Se for imagem/áudio/vídeo, descreva e extraia informações relevantes. Se for documento, resuma e destaque pontos principais.",
+      "description": "Análise multimodal com Gemini (imagem/áudio/documento)",
+      "agent": "gemini"
+    }
+  },
   "agent": {
     "explore": {
-      "model": "gemini/gemini-2.5-flash"
+      "model": "opencode/deepseek-v4-flash-free"
     },
     "plan": {
-      "description": "Modo planejamento - use DeepSeek R1 pra arquitetar antes de codar. Alterna com Tab",
+      "description": "Modo planejamento - arquitetar antes de codar. Alterna com Tab",
       "mode": "primary",
-      "model": "openrouter/deepseek/deepseek-r1:free",
+      "model": "opencode/deepseek-v4-flash-free",
       "prompt": "Você é um arquiteto de software. Analise o problema, sugira arquitetura, planeje a implementação em etapas. Seja detalhista. NÃO escreva código.",
       "tools": {
         "write": false,
@@ -20,10 +63,39 @@
       }
     },
     "fast": {
-      "description": "Subagent rápido para tarefas leves (i18n, debug, perguntas simples). Invocar com @fast",
+      "description": "Subagent rápido para tarefas de código, correções, comandos. Invocar com @fast",
+      "mode": "subagent",
+      "model": "opencode/deepseek-v4-flash-free",
+      "prompt": "Você é um assistente rápido e direto. Responda de forma concisa, sem rodeios. Prefira respostas curtas e vá direto ao ponto.",
+      "tools": {
+        "write": true,
+        "edit": true,
+        "bash": true,
+        "glob": true,
+        "grep": true,
+        "read": true
+      }
+    },
+    "gemini": {
+      "description": "Subagent multimodal para análise de imagem, áudio, vídeo e documentos. Invocar com @gemini",
       "mode": "subagent",
       "model": "gemini/gemini-2.5-flash",
-      "prompt": "Você é um assistente rápido e direto. Responda de forma concisa, sem rodeios. Prefira respostas curtas e vá direto ao ponto.",
+      "prompt": "Você é um analista multimodal. Use suas capacidades de visão e áudio para extrair informações detalhadas de imagens, áudios, vídeos e documentos fornecidos. Seja descritivo e preciso.",
+      "tools": {
+        "write": true,
+        "edit": false,
+        "bash": false,
+        "glob": false,
+        "grep": false,
+        "read": true
+      }
+    },
+    "think": {
+      "description": "DeepSeek V4 Flash em modo max — raciocínio máximo para problemas complexos. Invocar com @think",
+      "mode": "subagent",
+      "model": "opencode/deepseek-v4-flash-free",
+      "variant": "max",
+      "prompt": "Você é um analista profundo. Pense passo a passo, considere edge cases, tradeoffs, arquitetura, performance. Seja detalhista e completo na resposta.",
       "tools": {
         "write": true,
         "edit": true,

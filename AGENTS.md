@@ -18,11 +18,16 @@ src/
 │   ├── layout.jsx          — Root layout with theme-blocking script
 │   ├── page.jsx            — Home page (imports Home from pages/)
 │   ├── api/
-│   │   ├── gallery/route.js     — CRUD for gallery images (auth required for POST/DELETE)
-│   │   └── applications/route.js — Job application submission
-│   ├── gallery/page.jsx         — Public gallery (loading skeleton)
-│   ├── galleryAdmin/page.jsx    — Admin gallery (login required, upload/delete)
-│   └── meli-it-case/page.jsx   — Job application form (CPF/phone/CEP auto-format, validation)
+│   │   ├── gallery/route.js       — CRUD for gallery images (auth required for POST/DELETE)
+│   │   ├── gallery/auth/route.js  — Dedicated admin auth endpoint
+│   │   ├── gallery/proxy/route.js — Private Blob image proxy
+│   │   ├── gallery/migrate/route.js — Base64 to Blob migration
+│   │   ├── gallery/contact/route.js — Contact form submission
+│   │   └── applications/route.js   — Job application submission
+│   ├── gallery/page.jsx           — Public gallery (loading skeleton)
+│   ├── gallery/explore/page.jsx   — 3D circular gallery explore page
+│   ├── galleryAdmin/page.jsx      — Admin gallery (login required, upload/delete)
+│   └── meli-it-case/page.jsx     — Job application form (CPF/phone/CEP auto-format, validation)
 ├── components/
 │   ├── pages/Home.jsx     — Home page composition
 │   ├── Hero.jsx           — Main hero with MELI logo, typewriter, Lottie animation
@@ -32,7 +37,12 @@ src/
 │   ├── MeliFooter.jsx
 │   ├── About.jsx, TechSection.jsx, Skills.jsx, Projects.jsx, Contact.jsx
 │   ├── LanguageSwitcher.jsx, PageHeader.jsx, Providers.jsx
-│   └── GalleryLightbox.jsx
+│   ├── GalleryLightbox.jsx, GalleryFooter.jsx
+│   └── ui/
+│       ├── circular-gallery.jsx       — 3D circular carousel with blur depth-of-field
+│       ├── scroll-expansion-hero.jsx  — Scroll-to-expand media hero
+│       ├── image-edit-modal.jsx       — Edit image modal
+│       └── upload-overlay.jsx         — Upload progress overlay
 ├── lib/
 │   ├── i18n.js            — Translations (en/es/pt)
 │   ├── useTheme.js        — Theme toggle + localStorage (reads DOM class on init)
@@ -40,7 +50,15 @@ src/
 │   ├── mongodb.js         — MongoDB client singleton (lazy-init pattern)
 │   ├── auth.js            — Bearer token admin auth
 │   ├── validate.js        — Server-side validation (CPF, email, phone, CEP, image, application)
-│   └── rateLimit.js       — 20 req/min per IP rate limiter
+│   ├── rateLimit.js       — 20 req/min per IP rate limiter with periodic cleanup
+│   ├── blob.js            — Vercel Blob upload and signed URL helpers
+│   ├── stores/
+│   │   ├── authStore.js   — Zustand auth store with persist
+│   │   └── galleryStore.js — Zustand gallery UI state
+│   ├── schemas/
+│   │   └── gallery.js     — Zod schemas for gallery data
+│   └── hooks/
+│       └── useGallery.js  — TanStack Query hooks for gallery CRUD
 └── style/
     ├── styles.css          — All CSS (Tailwind v4 theme, cards, buttons, form, skeleton)
     ├── DotPattern.jsx      — Animated dot grid background
@@ -51,10 +69,10 @@ src/
 ## Key Features Implemented
 1. **Theme** — Light/dark toggle, persisted per device via localStorage, blocking script prevents flash
 2. **i18n** — EN/ES/PT with language switcher in hero and page headers
-3. **Gallery** — MongoDB-backed image gallery with admin upload/delete (Bearer token auth)
-4. **Security** — Admin auth (`ADMIN_API_KEY`), rate limiting (20/min), input sanitization, CPF/CEP/email validation
+3. **Gallery** — MongoDB-backed image gallery with admin upload/delete (Bearer token auth), 3D circular explore view
+4. **Security** — Admin auth (`ADMIN_API_KEY`), dedicated auth endpoint, rate limiting (20/min with cleanup), input sanitization, CPF/CEP/email validation
 5. **IT Case Form** — Application form with auto-formatting (CPF, phone, CEP), field-level format warnings, birthDate with age validation, PCD deficiency conditional field
-6. **Animations** — Staggered entrance, card hover lift, skeleton loading, dot pattern parallax, hero typewriter
+6. **Animations** — Staggered entrance, card hover lift, skeleton loading, dot pattern parallax, hero typewriter, 3D circular gallery with depth-of-field blur
 
 ## Notable CSS Variables (styles.css)
 - `--accent`: `#2D3277` (light), `#FFE600` (dark)
@@ -67,13 +85,36 @@ src/
 Providers defined in global config (`~/.config/opencode/opencode.jsonc`):
 - **Gemini** — Direct access via Google AI Studio (free tier)
 - **OpenRouter** — Router with BYOK + free model access
+- **OpenCode Zen** — Curated free models (see below)
 
-Agents defined in project `opencode.json`:
-| Agent | Model | Purpose |
-|-------|-------|---------|
-| `plan` (primary) | DeepSeek R1 (OR) | Architecture planning, Tab-switchable |
-| `fast` (subagent) | Gemini 2.5 Flash | Quick tasks: i18n, debug, questions. Invoke with `@fast` |
-| `explore` (subagent) | Gemini 2.5 Flash | Read-only code search. Invoke with `@explore` |
+### Free Models (OpenCode Zen)
+Current free models available:
+- `opencode/deepseek-v4-flash-free` — **Primary coding agent** (284B MoE, 1M ctx, replaces Gemini Flash for code)
+- `opencode/big-pickle` — Fallback stealth model (200K ctx)
+- `opencode/nemotron-3-super-free` — Alternative (fast inference, 262K ctx)
+
+> Free models change periodically. Check current available models with:
+> `curl https://opencode.ai/zen/v1/models`
+
+### Agents
+| Agent | Model | Variant | Purpose |
+|-------|-------|---------|---------|
+| `plan` (primary) | DeepSeek V4 Flash Free (Zen) | — | Architecture planning, Tab-switchable |
+| `fast` (subagent) | DeepSeek V4 Flash Free (Zen) | high (default) | Code tasks, commands, fixes. Invoke with `@fast` |
+| `explore` (subagent) | DeepSeek V4 Flash Free (Zen) | high (default) | Read-only code search. Invoke with `@explore` |
+| `gemini` (subagent) | Gemini 2.5 Flash | — | Multimodal analysis (image/audio/video/docs). Invoke with `@gemini` |
+| `think` (subagent) | DeepSeek V4 Flash Free (Zen) | **max** | Maximum reasoning for complex problems. Invoke with `@think` |
+
+### Custom Commands
+| Command | Agent | Description |
+|---------|-------|-------------|
+| `/build` | `fast` | Build + fix errors |
+| `/dev` | `fast` | Dev server with Turbopack |
+| `/lint` | `fast` | Lint + fix |
+| `/deploy` | `fast` | Build → git add → prompt message (conventional commit) → push |
+| `/review` | `plan` | Deep code review with R1 |
+| `/analyze` | `gemini` | Multimodal analysis (image/audio/document) |
+| `/think` | `think` | DeepSeek V4 Flash in max mode (maximum reasoning) |
 
 ## Environment Variables (.env.local)
 Required in Vercel dashboard → Environment Variables:
@@ -100,7 +141,7 @@ Required in Vercel dashboard → Environment Variables:
 ### Database
 - MongoDB client uses lazy-init pattern (no connection at import time)
 - Gallery settings stored as single document in `gallery.settings` collection (upsert)
-- Rate limiter: 20 req/min per IP via in-memory Map
+- Rate limiter: 20 req/min per IP via in-memory Map with periodic cleanup (5 min interval)
 
 ### Dynamic Categories
 - Categories stored in `settings.categories.items` in MongoDB
@@ -110,7 +151,14 @@ Required in Vercel dashboard → Environment Variables:
 ### Admin Auth
 - Zustand store with `persist` middleware (`gallery_admin_token` localStorage key)
 - Bearer token auth via `ADMIN_API_KEY` env var
+- Dedicated `POST /api/gallery/auth` endpoint for login
 - Centralized `getAuthHeaders()` across admin pages
+
+### Gallery (Explore)
+- 3D circular carousel with progressive blur depth-of-field
+- Only ~5 images visible at a time (configurable `visibleRange`)
+- Center image has glow effect; adjacent images progressively blur
+- Vignette overlay for cinematic feel
 
 ## Session History
 
@@ -160,3 +208,16 @@ Required in Vercel dashboard → Environment Variables:
 ### May 17 — Planned: Tests + Sentry
 - Test gallery: hero, explore, admin, dashboard
 - Set up Sentry for error tracking (Next.js SDK)
+
+### May 24 — Critical Bug Fixes + Depth-of-Field Gallery
+- Fixed Blob env var name (`GALLERY_RW_TOKEN_READ_WRITE_TOKEN` → `BLOB_READ_WRITE_TOKEN`) across 3 files
+- Created dedicated `POST /api/gallery/auth` endpoint for admin login
+- Refactored `authStore` to use the auth endpoint instead of faking a POST to gallery
+- Added periodic cleanup interval to rate limiter (prevents Map memory leak)
+- Removed dead code `generateAdminToken()` from `auth.js` (security risk)
+- Replaced full-visibility CircularGallery with depth-of-field blur variant:
+  - Only ~5 images visible at a time (configurable via `visibleRange`)
+  - Progressive CSS blur simulating camera depth-of-field
+  - Center image glow with accent color
+  - Dark vignette + ambient glow overlays for cinematic feel
+  - Performance: invisible items skip GPU compositing via `opacity: 0`

@@ -43,7 +43,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Image is not stored as base64' }, { status: 400 });
     }
 
-    if (!process.env.GALLERY_RW_TOKEN_READ_WRITE_TOKEN) {
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
       return NextResponse.json({ error: 'Blob token not configured' }, { status: 500 });
     }
 

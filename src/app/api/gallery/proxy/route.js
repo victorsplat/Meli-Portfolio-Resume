@@ -9,7 +9,7 @@ export async function GET(request) {
   }
 
   try {
-    const token = process.env.GALLERY_RW_TOKEN_READ_WRITE_TOKEN || process.env.BLOB_READ_WRITE_TOKEN;
+    const token = process.env.BLOB_READ_WRITE_TOKEN;
     const res = await fetch(url, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });

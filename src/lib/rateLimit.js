@@ -2,6 +2,17 @@ const rateMap = new Map();
 
 const WINDOW_MS = 60 * 1000;
 const MAX_REQUESTS = 20;
+const CLEANUP_INTERVAL = 5 * 60 * 1000;
+
+// Periodic cleanup to prevent memory leak from stale IP entries
+setInterval(() => {
+  const cutoff = Date.now() - WINDOW_MS;
+  for (const [ip, timestamps] of rateMap) {
+    const valid = timestamps.filter(t => t > cutoff);
+    if (valid.length === 0) rateMap.delete(ip);
+    else rateMap.set(ip, valid);
+  }
+}, CLEANUP_INTERVAL).unref();
 
 export function rateLimit(ip) {
   const now = Date.now();
