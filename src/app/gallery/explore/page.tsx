@@ -199,13 +199,7 @@ export default function ExplorePage() {
           </div>
 
           <div className="relative w-full h-screen flex items-center justify-center overflow-visible">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.4 }}
-              className="w-full h-full"
-              style={{ overflow: 'visible', willChange: 'auto' }}
-            >
+            <div className="w-full h-full">
               <CircularGallery
                 items={galleryItems}
                 radius={radius}
@@ -213,7 +207,7 @@ export default function ExplorePage() {
                 maxBlur={4}
                 onImageClick={handleLightboxOpen}
               />
-            </motion.div>
+            </div>
 
             <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20">
               {!showFooter && (
