@@ -1,5 +1,8 @@
 # Meli Portfolio — Project Context
 
+> **Setup Checklist (faça ao clonar)**
+> - [ ] `bw unlock` + `opencode-env-load meli` (carregar secrets)
+
 ## Tech Stack
 - **Framework**: Next.js 16 (Turbopack), React 18
 - **Styling**: Tailwind CSS v4 + custom CSS (`src/style/styles.css`)
@@ -123,6 +126,19 @@ Required in Vercel dashboard → Environment Variables:
 - Only ~5 images visible at a time (configurable `visibleRange`)
 - Center image has glow effect; adjacent images progressively blur
 - Vignette overlay for cinematic feel
+
+## 🔐 Secret Lifecycle
+- Secrets no Bitwarden: Secure Note "MELI-Portfolio-Resume" (folder: BrowserLogins/Projects/MELIPortfolio)
+- Load local: `opencode-env-load meli` (após `bw unlock`)
+- Criar Secure Note via CLI:
+  ```bash
+  opencode-env-load --create
+  # ou manual:
+  # echo '{"type":2,"name":"MeuProjeto","notes":"API_KEY: xyz\nDB_URL: abc","secureNote":{"type":0}}' | bw encode | bw create item
+  ```
+- ⚠️ Ao criar novo projeto com secrets → criar Secure Note + registrar neste AGENTS.md
+- `bw` CLI: download em github.com/bitwarden/clients/releases
+- `opencode-env-load` está em `~/.local/bin/opencode-env-load`
 
 ## Session History
 
