@@ -128,17 +128,24 @@ export default function ScrollExpandMedia({
   }, [onExpandComplete]);
 
   useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    document.body.style.height = '100dvh';
-    document.body.style.overscrollBehavior = 'none';
-    document.body.style.touchAction = 'none';
+    if (mediaFullyExpanded) {
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+      document.body.style.overscrollBehavior = '';
+      document.body.style.touchAction = '';
+    } else {
+      document.body.style.overflow = 'hidden';
+      document.body.style.height = '100dvh';
+      document.body.style.overscrollBehavior = 'none';
+      document.body.style.touchAction = 'none';
+    }
     return () => {
       document.body.style.overflow = '';
       document.body.style.height = '';
       document.body.style.overscrollBehavior = '';
       document.body.style.touchAction = '';
     };
-  }, []);
+  }, [mediaFullyExpanded]);
 
   useEffect(() => {
     function checkIfMobile() {

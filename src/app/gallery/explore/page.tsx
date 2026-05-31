@@ -110,7 +110,7 @@ export default function ExplorePage() {
   const currentLightboxImage = lightboxIndex !== null ? galleryItems[lightboxIndex] : null;
 
   return (
-    <div className="relative w-full overflow-x-hidden overflow-y-auto">
+    <div className="relative w-full h-screen overflow-visible">
       <div
         className="fixed inset-0 z-0 pointer-events-none"
         style={{
@@ -176,7 +176,7 @@ export default function ExplorePage() {
             </div>
           </div>
 
-          <div className="relative w-full min-h-screen flex items-center justify-center overflow-visible">
+          <div className="relative w-full h-screen flex items-center justify-center overflow-visible">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
