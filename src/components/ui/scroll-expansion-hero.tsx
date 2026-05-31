@@ -9,6 +9,7 @@ interface ScrollExpandMediaProps {
   mediaSrc: string;
   posterSrc?: string;
   bgImageSrc?: string;
+  postBgSrc?: string;
   title?: string;
   date?: string;
   scrollToExpand?: string;
@@ -22,6 +23,7 @@ export default function ScrollExpandMedia({
   mediaSrc,
   posterSrc,
   bgImageSrc,
+  postBgSrc,
   title,
   date,
   scrollToExpand,
@@ -184,6 +186,27 @@ export default function ScrollExpandMedia({
             <div className="absolute inset-0 bg-black/10" />
           </motion.div>
 
+          {postBgSrc && (
+            <motion.div
+              className="absolute inset-0 z-[1] h-full"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: mediaFullyExpanded ? 0.5 : 0 }}
+              transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <Image
+                src={postBgSrc}
+                alt=""
+                width={1920}
+                height={1080}
+                className="w-screen h-screen"
+                style={{ objectFit: 'cover', objectPosition: 'center' }}
+                priority
+                unoptimized
+              />
+              <div className="absolute inset-0 bg-black/30" />
+            </motion.div>
+          )}
+
           <div className="container mx-auto flex flex-col items-center justify-start relative z-10">
             <div className="flex flex-col items-center justify-center w-full h-[100dvh] relative">
               <div
@@ -295,16 +318,18 @@ export default function ScrollExpandMedia({
                   {title}
                 </motion.h2>
               </div>
-            </div>
 
-            <motion.section
-              className="flex flex-col w-full px-8 py-10 md:px-16 lg:py-20"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: showContent ? 1 : 0 }}
-              transition={{ duration: 0.7 }}
-            >
-              {children}
-            </motion.section>
+              {showContent && (
+                <motion.div
+                  initial={{ opacity: 0, y: 40 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.7, delay: 0.3 }}
+                  className="relative z-10 mt-8 px-4 text-center"
+                >
+                  {children}
+                </motion.div>
+              )}
+            </div>
           </div>
         </div>
       </section>

@@ -78,6 +78,7 @@ export default function GalleryPage() {
         mediaType="image"
         mediaSrc={mediaImage.url}
         bgImageSrc={bgImage?.url}
+        postBgSrc={postScrollBg?.url !== mediaImage?.url ? postScrollBg?.url : undefined}
         title={heroTitle}
         date={heroSubtitle}
         scrollToExpand={t('gallery.scrollToExpand')}
@@ -85,34 +86,22 @@ export default function GalleryPage() {
         onExpandComplete={() => setExpanded(true)}
       >
         {expanded && (
-          <div className="relative w-full min-h-[60vh] flex items-center justify-center">
-            {postScrollBg?.url && postScrollBg.url !== mediaImage?.url && (
-              <div className="absolute inset-0 -z-10">
-                <img
-                  src={postScrollBg.url}
-                  alt=""
-                  className="w-full h-full object-cover"
-                  style={{ filter: 'brightness(0.5)' }}
-                />
-              </div>
-            )}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="flex flex-col items-center justify-center gap-6 py-24 px-4 relative z-10"
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="flex flex-col items-center justify-center gap-6"
+          >
+            <p className="text-lg text-white max-w-xl text-center">
+              {t('gallery.exploreDesc')}
+            </p>
+            <button
+              onClick={() => router.push('/gallery/explore')}
+              className="btn text-lg px-10 py-4"
             >
-              <p className="text-lg text-white max-w-xl text-center">
-                {t('gallery.exploreDesc')}
-              </p>
-              <button
-                onClick={() => router.push('/gallery/explore')}
-                className="btn text-lg px-10 py-4"
-              >
-                {t('gallery.enterGallery')}
-              </button>
-            </motion.div>
-          </div>
+              {t('gallery.enterGallery')}
+            </button>
+          </motion.div>
         )}
       </ScrollExpandMedia>
     </div>
