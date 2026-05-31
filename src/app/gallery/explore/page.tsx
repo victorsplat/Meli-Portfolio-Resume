@@ -204,6 +204,7 @@ export default function ExplorePage() {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.4 }}
               className="w-full h-full"
+              style={{ overflow: 'visible', willChange: 'auto' }}
             >
               <CircularGallery
                 items={galleryItems}

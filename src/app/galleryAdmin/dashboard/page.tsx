@@ -73,6 +73,14 @@ function slugify(str: string): string {
   return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-/g, '');
 }
 
+function isBlobUrl(url: string | undefined): boolean {
+  return !!url && (url.startsWith('/api/gallery/proxy?url=') || url.startsWith('https://'));
+}
+
+function isBase64Url(url: string | undefined): boolean {
+  return !!url && url.startsWith('data:');
+}
+
 export default function DashboardPage() {
   const { token, login, logout } = useAuthStore();
   const [ready, setReady] = useState(false);
@@ -806,11 +814,11 @@ export default function DashboardPage() {
                   {/* Storage Stats */}
                   <div className="flex items-center gap-4 mb-6 pb-4 border-b border-panel-border">
                     <div className="text-sm">
-                      <span className="font-semibold text-green-600">{(images as GalleryImage[]).filter((i: GalleryImage) => i.url?.startsWith('https://')).length}</span>
+                      <span className="font-semibold text-green-600">{(images as GalleryImage[]).filter((i: GalleryImage) => isBlobUrl(i.url)).length}</span>
                       <span className="text-muted"> on Blob</span>
                     </div>
                     <div className="text-sm">
-                      <span className="font-semibold text-amber-600">{(images as GalleryImage[]).filter((i: GalleryImage) => i.url?.startsWith('data:')).length}</span>
+                      <span className="font-semibold text-amber-600">{(images as GalleryImage[]).filter((i: GalleryImage) => isBase64Url(i.url)).length}</span>
                       <span className="text-muted"> on Base64</span>
                     </div>
                     <div className="text-sm">
@@ -820,7 +828,7 @@ export default function DashboardPage() {
                   </div>
 
                   {/* Base64 images — need migration */}
-                  {(images as GalleryImage[]).filter((i: GalleryImage) => i.url?.startsWith('data:')).length > 0 && (
+                  {(images as GalleryImage[]).filter((i: GalleryImage) => isBase64Url(i.url)).length > 0 && (
                     <div className="mb-8">
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="text-sm font-semibold text-amber-600 flex items-center gap-2">
@@ -829,7 +837,7 @@ export default function DashboardPage() {
                         <div className="flex items-center gap-2">
                           {migratingAll && (
                             <span className="text-xs text-muted">
-                              {Object.values(migratingMap).filter((s) => s === 'done').length} / {(images as GalleryImage[]).filter((i: GalleryImage) => i.url?.startsWith('data:')).length}
+                              {Object.values(migratingMap).filter((s) => s === 'done').length} / {(images as GalleryImage[]).filter((i: GalleryImage) => isBase64Url(i.url)).length}
                             </span>
                           )}
                           <Button
@@ -837,7 +845,7 @@ export default function DashboardPage() {
                             variant="outline"
                             onClick={async () => {
                               setMigratingAll(true);
-                              const base64Images = (images as GalleryImage[]).filter((i: GalleryImage) => i.url?.startsWith('data:'));
+                              const base64Images = (images as GalleryImage[]).filter((i: GalleryImage) => isBase64Url(i.url));
                               for (const img of base64Images) {
                                 if (migratingMap[img._id] === 'done') continue;
                                 setMigratingMap((p) => ({ ...p, [img._id]: 'loading' }));
@@ -858,13 +866,13 @@ export default function DashboardPage() {
                                 Migrating...
                               </span>
                             ) : (
-                              <span>↑ Migrate All ({(images as GalleryImage[]).filter((i: GalleryImage) => i.url?.startsWith('data:')).length})</span>
+                              <span>↑ Migrate All ({(images as GalleryImage[]).filter((i: GalleryImage) => isBase64Url(i.url)).length})</span>
                             )}
                           </Button>
                         </div>
                       </div>
                       <div className="grid gap-3">
-                        {(images as GalleryImage[]).filter((i: GalleryImage) => i.url?.startsWith('data:')).map((img: GalleryImage) => (
+                        {(images as GalleryImage[]).filter((i: GalleryImage) => isBase64Url(i.url)).map((img: GalleryImage) => (
                           <div key={img._id} className="flex items-center gap-3 p-3 rounded-xl bg-amber-500/5 border border-amber-500/20">
                             <div className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-white/30">
                               <img src={img.url} alt="" className="w-full h-full object-cover" />
@@ -920,13 +928,13 @@ export default function DashboardPage() {
                   )}
 
                   {/* Blob images — already good */}
-                  {(images as GalleryImage[]).filter((i: GalleryImage) => i.url?.startsWith('https://')).length > 0 && (
+                  {(images as GalleryImage[]).filter((i: GalleryImage) => isBlobUrl(i.url)).length > 0 && (
                     <div>
                       <h3 className="text-sm font-semibold text-green-600 mb-3 flex items-center gap-2">
                         <span>✓</span> Blob Images — already on Vercel Blob
                       </h3>
                       <div className="flex flex-wrap gap-2">
-                        {(images as GalleryImage[]).filter((i: GalleryImage) => i.url?.startsWith('https://')).map((img: GalleryImage) => (
+                        {(images as GalleryImage[]).filter((i: GalleryImage) => isBlobUrl(i.url)).map((img: GalleryImage) => (
                           <div key={img._id} className="group relative w-16 h-16 rounded-lg overflow-hidden ring-1 ring-green-500/30">
                             <img src={img.url} alt="" className="w-full h-full object-cover" />
                             <div className="absolute inset-0 bg-green-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
