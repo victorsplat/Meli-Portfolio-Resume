@@ -5,7 +5,7 @@ import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 import type { ReactNode } from 'react';
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+const geist = Geist({subsets:['latin'],variable:'--font-sans',preload:false});
 
 export const metadata = {
   title: 'Meli Portfolio',

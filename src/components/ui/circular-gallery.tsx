@@ -77,7 +77,7 @@ const GalleryCard = memo(function GalleryCard({
         boxShadow: boxShadow,
         transition: 'opacity 0.6s ease, transform 0.8s cubic-bezier(0.22,1,0.36,1), filter 0.8s ease, box-shadow 0.6s ease',
         pointerEvents: isVisible && opacity > 0.1 ? 'auto' : 'none',
-        willChange: isVisible ? 'transform, opacity' : 'auto',
+        willChange: isCenter ? 'transform' : 'auto',
       }}
     >
       <div className="relative w-full h-full rounded-xl shadow-2xl overflow-hidden border border-border/50 bg-card/70 dark:bg-card/30 backdrop-blur-lg">
