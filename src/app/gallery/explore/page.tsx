@@ -4,12 +4,14 @@ import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useI18n } from '@/lib/i18n';
 import { usePageTitle } from '@/lib/usePageTitle';
+import { useTheme } from '@/lib/useTheme';
 import { useGalleryImages, useGallerySettings } from '@/hooks/useGallery';
 import CircularGallery from '@/components/ui/circular-gallery';
 import GalleryFooter from '@/components/GalleryFooter';
 import GalleryLightbox from '@/components/GalleryLightbox';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { IoMoonOutline, IoSunnyOutline } from 'react-icons/io5';
 import type { GalleryImage, Category } from '@/lib/schemas/gallery';
 
 interface GalleryItem {
@@ -44,8 +46,10 @@ function mapToGalleryItem(img: GalleryImage, catLabel: string, lang: string): Ga
 export default function ExplorePage() {
   const { t, lang } = useI18n();
   usePageTitle('gallery.explore');
+  const { toggleTheme } = useTheme();
   const [activeCategory, setActiveCategory] = useState('all');
   const [radius, setRadius] = useState(500);
+  const [visibleRange, setVisibleRange] = useState(2);
   const [showFooter, setShowFooter] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const resizeTickRef = useRef<number | null>(null);
@@ -66,6 +70,7 @@ export default function ExplorePage() {
       if (resizeTickRef.current) cancelAnimationFrame(resizeTickRef.current);
       resizeTickRef.current = requestAnimationFrame(() => {
         setRadius(Math.min(500, window.innerWidth * 0.35));
+        setVisibleRange(window.innerWidth < 768 ? 1 : 2);
       });
     }
     window.addEventListener('resize', handleResize);
@@ -73,6 +78,10 @@ export default function ExplorePage() {
       window.removeEventListener('resize', handleResize);
       if (resizeTickRef.current) cancelAnimationFrame(resizeTickRef.current);
     };
+  }, []);
+
+  useEffect(() => {
+    setVisibleRange(window.innerWidth < 768 ? 1 : 2);
   }, []);
 
   function getCategoryLabel(catId: string): string {
@@ -176,6 +185,19 @@ export default function ExplorePage() {
             </div>
           </div>
 
+          <div className="absolute top-3 right-4 z-30 pointer-events-none">
+            <div className="pointer-events-auto">
+              <button
+                onClick={toggleTheme}
+                className="w-10 h-10 rounded-full bg-white/60 dark:bg-white/10 backdrop-blur-md border border-border/50 flex items-center justify-center text-muted hover:text-foreground hover:bg-white/80 dark:hover:bg-white/20 transition-colors"
+                aria-label="Toggle theme"
+              >
+                <IoMoonOutline size={18} className="block dark:hidden" />
+                <IoSunnyOutline size={18} className="hidden dark:block" />
+              </button>
+            </div>
+          </div>
+
           <div className="relative w-full h-screen flex items-center justify-center overflow-visible">
             <motion.div
               initial={{ opacity: 0 }}
@@ -186,6 +208,8 @@ export default function ExplorePage() {
               <CircularGallery
                 items={galleryItems}
                 radius={radius}
+                visibleRange={visibleRange}
+                maxBlur={10}
                 onImageClick={handleLightboxOpen}
               />
             </motion.div>

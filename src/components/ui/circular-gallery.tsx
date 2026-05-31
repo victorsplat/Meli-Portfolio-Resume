@@ -117,7 +117,7 @@ export default function CircularGallery({
   radius = 500,
   autoRotateSpeed = 0.01,
   visibleRange = 2,
-  maxBlur = 6,
+  maxBlur = 10,
   glowIntensity = 0.25,
   onImageClick,
 }: CircularGalleryProps) {
@@ -343,12 +343,25 @@ export default function CircularGallery({
 
       <div className="absolute bottom-4 left-4 z-20 pointer-events-auto">
         <button
-          onClick={() => setIsAutoRotating(prev => !prev)}
-          className="w-10 h-10 rounded-full bg-white/20 dark:bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+          onClick={() => {
+            setIsAutoRotating(prev => !prev);
+            setIsIdle(true);
+            if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
+          }}
+          className={cn(
+            "w-10 h-10 rounded-full backdrop-blur-md border flex items-center justify-center transition-colors",
+            isAutoRotating
+              ? "bg-[#FFE600] text-[#111827] border-[#FFE600]/50 shadow-lg shadow-[#FFE600]/20"
+              : "bg-white/20 dark:bg-white/10 border-white/20 text-white hover:bg-white/30"
+          )}
           aria-label={isAutoRotating ? 'Stop auto-rotation' : 'Start auto-rotation'}
           aria-pressed={isAutoRotating}
         >
-          {isAutoRotating ? '⏹' : '🔄'}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[18px] h-[18px]">
+            <rect x="2" y="9" width="12" height="6" rx="1.5" />
+            <circle cx="15" cy="12" r="2" />
+            <path d="M17 9 L23 6 L23 18 L17 15 Z" />
+          </svg>
         </button>
       </div>
 
