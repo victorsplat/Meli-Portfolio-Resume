@@ -30,24 +30,28 @@ export default function ScrollExpandMedia({
     setMediaFullyExpanded(false);
   }, [mediaType]);
 
+  const wheelRef = useRef({ progress: 0, expanded: false });
+  wheelRef.current = { progress: scrollProgress, expanded: mediaFullyExpanded };
+
   useEffect(() => {
     function handleWheel(e) {
-      if (mediaFullyExpanded && e.deltaY < 0 && window.scrollY <= 5) {
+      const { progress, expanded } = wheelRef.current;
+      if (expanded && e.deltaY > 0) return;
+      if (expanded && e.deltaY < 0 && window.scrollY <= 5) {
         setMediaFullyExpanded(false);
-        e.preventDefault();
-      } else if (!mediaFullyExpanded) {
-        e.preventDefault();
-        const scrollDelta = e.deltaY * 0.0009;
-        const newProgress = Math.min(Math.max(scrollProgress + scrollDelta, 0), 1);
-        setScrollProgress(newProgress);
+        return;
+      }
+      e.preventDefault();
+      const scrollDelta = e.deltaY * 0.0009;
+      const newProgress = Math.min(Math.max(progress + scrollDelta, 0), 1);
+      setScrollProgress(newProgress);
 
-        if (newProgress >= 1) {
-          setMediaFullyExpanded(true);
-          setShowContent(true);
-          if (onExpandComplete) onExpandComplete();
-        } else if (newProgress < 0.75) {
-          setShowContent(false);
-        }
+      if (newProgress >= 1) {
+        setMediaFullyExpanded(true);
+        setShowContent(true);
+        if (onExpandComplete) onExpandComplete();
+      } else if (newProgress < 0.75) {
+        setShowContent(false);
       }
     }
 
@@ -57,30 +61,31 @@ export default function ScrollExpandMedia({
 
     function handleTouchMove(e) {
       if (!touchStartY) return;
+      const { progress, expanded } = wheelRef.current;
 
       const touchY = e.touches[0].clientY;
       const deltaY = touchStartY - touchY;
 
-      if (mediaFullyExpanded && deltaY < -20 && window.scrollY <= 5) {
+      if (expanded && deltaY > 0) return;
+      if (expanded && deltaY < -20 && window.scrollY <= 5) {
         setMediaFullyExpanded(false);
-        e.preventDefault();
-      } else if (!mediaFullyExpanded) {
-        e.preventDefault();
-        const scrollFactor = deltaY < 0 ? 0.008 : 0.005;
-        const scrollDelta = deltaY * scrollFactor;
-        const newProgress = Math.min(Math.max(scrollProgress + scrollDelta, 0), 1);
-        setScrollProgress(newProgress);
-
-        if (newProgress >= 1) {
-          setMediaFullyExpanded(true);
-          setShowContent(true);
-          if (onExpandComplete) onExpandComplete();
-        } else if (newProgress < 0.75) {
-          setShowContent(false);
-        }
-
-        setTouchStartY(touchY);
+        return;
       }
+      e.preventDefault();
+      const scrollFactor = deltaY < 0 ? 0.008 : 0.005;
+      const scrollDelta = deltaY * scrollFactor;
+      const newProgress = Math.min(Math.max(progress + scrollDelta, 0), 1);
+      setScrollProgress(newProgress);
+
+      if (newProgress >= 1) {
+        setMediaFullyExpanded(true);
+        setShowContent(true);
+        if (onExpandComplete) onExpandComplete();
+      } else if (newProgress < 0.75) {
+        setShowContent(false);
+      }
+
+      setTouchStartY(touchY);
     }
 
     function handleTouchEnd() {
@@ -88,7 +93,8 @@ export default function ScrollExpandMedia({
     }
 
     function handleScroll() {
-      if (!mediaFullyExpanded) {
+      const { expanded } = wheelRef.current;
+      if (!expanded) {
         window.scrollTo(0, 0);
       }
     }
@@ -106,7 +112,7 @@ export default function ScrollExpandMedia({
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [scrollProgress, mediaFullyExpanded, touchStartY, onExpandComplete]);
+  }, [onExpandComplete]);
 
   useEffect(() => {
     function checkIfMobile() {
@@ -123,7 +129,7 @@ export default function ScrollExpandMedia({
   const textTranslateX = scrollProgress * (isMobileState ? 180 : 150);
 
   return (
-    <div ref={sectionRef} className="transition-colors duration-700 ease-in-out overflow-x-hidden">
+    <div ref={sectionRef} className="transition-colors duration-700 ease-in-out overflow-x-clip">
       <section className="relative flex flex-col items-center justify-start min-h-[100dvh]">
         <div className="relative w-full flex flex-col items-center min-h-[100dvh]">
           <motion.div
@@ -140,6 +146,7 @@ export default function ScrollExpandMedia({
               className="w-screen h-screen"
               style={{ objectFit: 'cover', objectPosition: 'center' }}
               priority
+              unoptimized
             />
             <div className="absolute inset-0 bg-black/10" />
           </motion.div>
@@ -212,6 +219,7 @@ export default function ScrollExpandMedia({
                       width={1280}
                       height={720}
                       className="w-full h-full object-cover rounded-xl"
+                      unoptimized
                     />
                     <motion.div
                       className="absolute inset-0 bg-black/50 rounded-xl"

@@ -13,6 +13,7 @@ export default function CircularGallery({
   glowIntensity = 0.25,
 }) {
   const [rotation, setRotation] = useState(0);
+const [failedImages, setFailedImages] = useState(new Set());
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isIdle, setIsIdle] = useState(true);
   const idleTimeoutRef = useRef(null);
@@ -177,10 +178,12 @@ export default function CircularGallery({
             >
               <div className="relative w-full h-full rounded-xl shadow-2xl overflow-hidden border border-border/50 bg-card/70 dark:bg-card/30 backdrop-blur-lg">
                 <img
-                  src={item.photo.url}
+                  src={failedImages.has(item.photo.url) ? '/fallback-image.svg' : item.photo.url}
                   alt={item.photo.text || ''}
                   className="absolute inset-0 w-full h-full object-cover"
                   style={{ objectPosition: item.photo.pos || 'center' }}
+                  loading="lazy"
+                  onError={() => setFailedImages(prev => new Set(prev).add(item.photo.url))}
                 />
                 <div className="absolute bottom-0 left-0 w-full p-3 bg-gradient-to-t from-black/80 to-transparent text-white">
                   <h3 className="text-sm font-semibold leading-tight">{item.common}</h3>

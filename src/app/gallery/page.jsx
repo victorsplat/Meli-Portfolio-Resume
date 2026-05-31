@@ -76,7 +76,7 @@ export default function GalleryPage() {
       <ScrollExpandMedia
         mediaType="image"
         mediaSrc={mediaImage.url}
-        bgImageSrc={bgImage.url}
+        bgImageSrc={bgImage?.url}
         title={heroTitle}
         date={heroSubtitle}
         scrollToExpand={t('gallery.scrollToExpand')}

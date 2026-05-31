@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "instructions": ["AGENTS.md"],
+  "instructions": ["AGENTS.md", "ARCHITECTURE_ANCHOR.MD"],
   "mcp": {
     "context7": {
       "type": "remote",
@@ -29,9 +29,9 @@
       "agent": "fast"
     },
     "review": {
-      "template": "Revise o código fornecido. Analise: arquitetura, boas práticas, performance, segurança, tratamento de erros, legibilidade. Sugira melhorias específicas.",
-      "description": "Code review profundo",
-      "agent": "plan"
+      "template": "Você é um revisor de código. Siga EXATAMENTE este pipeline:\n\n─── FASE 1: ANÁLISE V4 ───\nAnalise profundamente o código e o problema descrito. Salve sua análise em arquivo:\n\nbash: cat > /tmp/opencode-review-analysis.md << 'EOF'\n[escreva sua análise completa aqui]\nEOF\n\n─── FASE 2: DEBATE ───\nCopie o código fornecido para o diretório temporário e execute o script de pipeline:\n\nbash: cat > /tmp/opencode-review/code.md << 'CODEEOF'\n{{input}}\nCODEEOF\n\nbash: ~/.local/bin/opencode-review /tmp/opencode-review-analysis.md\n\nLeia atentamente o output e leia /tmp/opencode-review/debate_output.md se DEBATE_USED=true.\n\n─── FASE 3: SÍNTESE FINAL ───\nEntregue neste formato:\n\n══════════ REVIEW: [componente] ══════════\n\n🔍 V4 FLASH — Análise técnica\n[problemas encontrados]\n\n💬 DEBATE ($DEBATE_MODEL)\n[pontos debatidos ou \"indisponível — revisão exclusiva V4\"]\n\n✅ CÓDIGO FINAL CORRIGIDO\n[código final]\n\n📝 EXPLICAÇÃO DAS MUDANÇAS\n[o que mudou e por que]\n\n🤝 Consenso V4 + $DEBATE_MODEL / Revisão unilateral V4",
+      "description": "V4→Debate→V4: análise + debate Qwen3/Nemotron + síntese",
+      "agent": "fast"
     },
     "think": {
       "template": "Analise o problema com raciocínio máximo. Pense passo a passo, considere edge cases, tradeoffs, arquitetura, e só então responda de forma completa.",
