@@ -26,91 +26,75 @@
     </radialGradient>
   </defs>
 
-  <style>
-    .ring-outer {
-      animation: rotate-outer 4s ease-in-out infinite;
-      transform-origin: 150px 150px;
-    }
-    .ring-inner {
-      animation: rotate-inner 3s ease-in-out infinite;
-      transform-origin: 150px 150px;
-    }
-    .ring-mid {
-      animation: rotate-mid 6s linear infinite;
-      transform-origin: 150px 150px;
-    }
-    .pulse-dot {
-      animation: pulse-dot 2s ease-in-out infinite;
-    }
-    .fade-pulse {
-      animation: fade-pulse 2.4s ease-in-out infinite;
-    }
-
-    @keyframes rotate-outer {
-      0%   { transform: rotate(0deg); }
-      50%  { transform: rotate(180deg); }
-      100% { transform: rotate(360deg); }
-    }
-    @keyframes rotate-inner {
-      0%   { transform: rotate(0deg); }
-      50%  { transform: rotate(-180deg); }
-      100% { transform: rotate(-360deg); }
-    }
-    @keyframes rotate-mid {
-      0%   { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    @keyframes pulse-dot {
-      0%, 100% { r: 4; opacity: 0.4; }
-      50%       { r: 8; opacity: 0.9; }
-    }
-    @keyframes fade-pulse {
-      0%, 100% { opacity: 0.2; }
-      50%      { opacity: 0.6; }
-    }
-  </style>
-
   <rect width="300" height="300" rx="12" fill="url(#bgGrad)" />
 
-  <circle class="ring-outer"
-    cx="150" cy="150" r="110"
-    fill="none" stroke="url(#grad1)" stroke-width="2"
-    stroke-dasharray="80 160 40 160"
-    stroke-linecap="round"
-    filter="url(#glow)"
-    opacity="0.6"
-  />
-
-  <circle class="ring-mid"
-    cx="150" cy="150" r="85"
-    fill="none" stroke="url(#grad2)" stroke-width="1.5"
-    stroke-dasharray="60 200"
-    stroke-linecap="round"
-    opacity="0.4"
-  />
-
-  <circle class="ring-inner"
-    cx="150" cy="150" r="55"
-    fill="none" stroke="url(#grad3)" stroke-width="3"
-    stroke-dasharray="140 210"
-    stroke-linecap="round"
-    filter="url(#glow)"
-    opacity="0.8"
-  />
-
-  <circle class="pulse-dot"
-    cx="150" cy="150"
-    fill="#585FD9"
-    filter="url(#glow)"
-  />
-
-  <g class="ring-outer" opacity="0.5">
-    <circle cx="150" cy="40" r="3" fill="#585FD9" class="fade-pulse" />
+  <g>
+    <circle cx="150" cy="150" r="110"
+      fill="none" stroke="url(#grad1)" stroke-width="2"
+      stroke-dasharray="80 160 40 160"
+      stroke-linecap="round"
+      filter="url(#glow)"
+      opacity="0.6"
+    />
+    <animateTransform attributeName="transform" type="rotate"
+      from="0 150 150" to="360 150 150"
+      dur="4s" repeatCount="indefinite" />
   </g>
-  <g class="ring-inner" opacity="0.4">
-    <circle cx="150" cy="95" r="2.5" fill="#41468B" class="fade-pulse" style="animation-delay: -0.8s" />
+
+  <g>
+    <circle cx="150" cy="150" r="85"
+      fill="none" stroke="url(#grad2)" stroke-width="1.5"
+      stroke-dasharray="60 200"
+      stroke-linecap="round"
+      opacity="0.4"
+    />
+    <animateTransform attributeName="transform" type="rotate"
+      from="0 150 150" to="360 150 150"
+      dur="6s" repeatCount="indefinite" />
   </g>
-  <g class="ring-mid" opacity="0.3">
-    <circle cx="150" cy="65" r="2" fill="#2D3277" class="fade-pulse" style="animation-delay: -1.6s" />
+
+  <g>
+    <circle cx="150" cy="150" r="55"
+      fill="none" stroke="url(#grad3)" stroke-width="3"
+      stroke-dasharray="140 210"
+      stroke-linecap="round"
+      filter="url(#glow)"
+      opacity="0.8"
+    />
+    <animateTransform attributeName="transform" type="rotate"
+      from="0 150 150" to="-360 150 150"
+      dur="3s" repeatCount="indefinite" />
+  </g>
+
+  <circle cx="150" cy="150" r="6" fill="#585FD9" filter="url(#glow)">
+    <animate attributeName="r" values="4;8;4" dur="2s" repeatCount="indefinite" />
+    <animate attributeName="opacity" values="0.4;0.9;0.4" dur="2s" repeatCount="indefinite" />
+  </circle>
+
+  <g>
+    <circle cx="150" cy="40" r="3" fill="#585FD9" opacity="0.5">
+      <animate attributeName="opacity" values="0.2;0.6;0.2" dur="2.4s" repeatCount="indefinite" />
+    </circle>
+    <animateTransform attributeName="transform" type="rotate"
+      from="0 150 150" to="360 150 150"
+      dur="4s" repeatCount="indefinite" />
+  </g>
+
+  <g>
+    <circle cx="150" cy="95" r="2.5" fill="#41468B" opacity="0.4">
+      <animate attributeName="opacity" values="0.2;0.6;0.2" dur="2.4s" begin="-0.8s" repeatCount="indefinite" />
+    </circle>
+    <animateTransform attributeName="transform" type="rotate"
+      from="0 150 150" to="-360 150 150"
+      dur="3s" repeatCount="indefinite" />
+  </g>
+
+  <g>
+    <circle cx="150" cy="65" r="2" fill="#2D3277" opacity="0.3">
+      <animate attributeName="opacity" values="0.2;0.6;0.2" dur="2.4s" begin="-1.6s" repeatCount="indefinite" />
+    </circle>
+    <animateTransform attributeName="transform" type="rotate"
+      from="0 150 150" to="360 150 150"
+      dur="6s" repeatCount="indefinite" />
   </g>
 </svg>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useI18n } from '@/lib/i18n';
@@ -25,7 +25,7 @@ export default function GalleryPage() {
     .filter(Boolean);
   const featuredImages = images.filter((img: GalleryImage) => img.featured);
 
-  const usedIds = new Set<string>();
+  const usedIds = useRef(new Set<string>()).current;
   function pickHeroImage(idx: number): GalleryImage | undefined {
     const img = heroSettingsImages[idx] || featuredImages.find((f: GalleryImage) => !usedIds.has(f._id)) || images.find((i: GalleryImage) => !usedIds.has(i._id));
     if (img) usedIds.add(img._id);
@@ -86,7 +86,7 @@ export default function GalleryPage() {
       >
         {expanded && (
           <div className="relative w-full min-h-[60vh] flex items-center justify-center">
-            {postScrollBg?.url && (
+            {postScrollBg?.url && postScrollBg.url !== mediaImage?.url && (
               <div className="absolute inset-0 -z-10">
                 <img
                   src={postScrollBg.url}

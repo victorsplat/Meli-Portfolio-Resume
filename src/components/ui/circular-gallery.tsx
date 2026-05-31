@@ -124,6 +124,7 @@ export default function CircularGallery({
   const [rotation, setRotation] = useState(0);
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
   const [isIdle, setIsIdle] = useState(true);
+  const [isAutoRotating, setIsAutoRotating] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const idleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -131,10 +132,12 @@ export default function CircularGallery({
   const wheelAccumRef = useRef(0);
   const resizeTickRef = useRef<number | null>(null);
   const isIdleRef = useRef(true);
+  const isAutoRotatingRef = useRef(false);
   const autoRotateSpeedRef = useRef(autoRotateSpeed);
   const isVisibleRef = useRef(true);
 
   isIdleRef.current = isIdle;
+  isAutoRotatingRef.current = isAutoRotating;
   autoRotateSpeedRef.current = autoRotateSpeed;
 
   const handleImageError = useCallback((url: string) => {
@@ -212,7 +215,7 @@ export default function CircularGallery({
         return;
       }
 
-      if (isIdleRef.current) {
+      if (isIdleRef.current && isAutoRotatingRef.current) {
         lastAutoStep += autoRotateSpeedRef.current;
         if (lastAutoStep >= 1) {
           const angle = (360 / items.length);
@@ -258,7 +261,7 @@ export default function CircularGallery({
     function handleResize() {
       if (resizeTickRef.current) cancelAnimationFrame(resizeTickRef.current);
       resizeTickRef.current = requestAnimationFrame(() => {
-        setRotation(prev => prev); // no-op to keep ref alive
+        setRotation(prev => prev + 0.0001);
       });
     }
     window.addEventListener('resize', handleResize);
@@ -287,8 +290,8 @@ export default function CircularGallery({
       aria-roledescription="carousel"
       aria-label="Image gallery carousel"
       tabIndex={0}
-      className={cn("relative w-full h-full flex items-center justify-center overflow-hidden touch-none focus:outline-none", className)}
-      style={{ perspective: '1200px' }}
+      className={cn("relative w-full h-full flex items-center justify-center overflow-visible touch-none focus:outline-none", className)}
+      style={{ perspective: '1800px' }}
     >
       <div
         className="absolute inset-0 z-0 pointer-events-none"
@@ -337,6 +340,17 @@ export default function CircularGallery({
           background: 'linear-gradient(to top, rgba(255,255,255,0.03) 0%, transparent 100%)',
         }}
       />
+
+      <div className="absolute bottom-4 left-4 z-20 pointer-events-auto">
+        <button
+          onClick={() => setIsAutoRotating(prev => !prev)}
+          className="w-10 h-10 rounded-full bg-white/20 dark:bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+          aria-label={isAutoRotating ? 'Stop auto-rotation' : 'Start auto-rotation'}
+          aria-pressed={isAutoRotating}
+        >
+          {isAutoRotating ? '⏹' : '🔄'}
+        </button>
+      </div>
 
       <div className="absolute bottom-4 right-4 z-20 flex gap-2 pointer-events-auto">
         <button

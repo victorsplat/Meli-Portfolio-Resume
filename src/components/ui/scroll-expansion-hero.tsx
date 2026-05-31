@@ -32,7 +32,7 @@ export default function ScrollExpandMedia({
   const [scrollProgress, setScrollProgress] = useState(0);
   const [showContent, setShowContent] = useState(false);
   const [mediaFullyExpanded, setMediaFullyExpanded] = useState(false);
-  const [touchStartY, setTouchStartY] = useState(0);
+  const touchStartYRef = useRef(0);
   const [isMobileState, setIsMobileState] = useState(false);
 
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -55,7 +55,7 @@ export default function ScrollExpandMedia({
         return;
       }
       e.preventDefault();
-      const scrollDelta = e.deltaY * 0.0009;
+      const scrollDelta = e.deltaY * 0.002;
       const newProgress = Math.min(Math.max(progress + scrollDelta, 0), 1);
       setScrollProgress(newProgress);
 
@@ -69,15 +69,15 @@ export default function ScrollExpandMedia({
     }
 
     function handleTouchStart(e: TouchEvent) {
-      setTouchStartY(e.touches[0].clientY);
+      touchStartYRef.current = e.touches[0].clientY;
     }
 
     function handleTouchMove(e: TouchEvent) {
-      if (!touchStartY) return;
+      if (touchStartYRef.current === 0) return;
       const { progress, expanded } = wheelRef.current;
 
       const touchY = e.touches[0].clientY;
-      const deltaY = touchStartY - touchY;
+      const deltaY = touchStartYRef.current - touchY;
 
       if (expanded && deltaY > 0) return;
       if (expanded && deltaY < -20 && window.scrollY <= 5) {
@@ -85,7 +85,7 @@ export default function ScrollExpandMedia({
         return;
       }
       e.preventDefault();
-      const scrollFactor = deltaY < 0 ? 0.008 : 0.005;
+      const scrollFactor = deltaY < 0 ? 0.02 : 0.01;
       const scrollDelta = deltaY * scrollFactor;
       const newProgress = Math.min(Math.max(progress + scrollDelta, 0), 1);
       setScrollProgress(newProgress);
@@ -98,11 +98,11 @@ export default function ScrollExpandMedia({
         setShowContent(false);
       }
 
-      setTouchStartY(touchY);
+      touchStartYRef.current = touchY;
     }
 
     function handleTouchEnd() {
-      setTouchStartY(0);
+      touchStartYRef.current = 0;
     }
 
     function handleScroll() {
@@ -126,6 +126,19 @@ export default function ScrollExpandMedia({
       window.removeEventListener('touchend', handleTouchEnd);
     };
   }, [onExpandComplete]);
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    document.body.style.height = '100dvh';
+    document.body.style.overscrollBehavior = 'none';
+    document.body.style.touchAction = 'none';
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+      document.body.style.overscrollBehavior = '';
+      document.body.style.touchAction = '';
+    };
+  }, []);
 
   useEffect(() => {
     function checkIfMobile() {

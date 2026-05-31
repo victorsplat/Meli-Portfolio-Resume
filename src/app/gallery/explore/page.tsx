@@ -110,7 +110,17 @@ export default function ExplorePage() {
   const currentLightboxImage = lightboxIndex !== null ? galleryItems[lightboxIndex] : null;
 
   return (
-    <div className="h-screen bg-bg-app overflow-hidden">
+    <div className="relative w-full overflow-x-hidden overflow-y-auto">
+      <div
+        className="fixed inset-0 z-0 pointer-events-none"
+        style={{
+          background: `
+            radial-gradient(ellipse 80% 50% at 50% -20%, rgba(88,95,217,0.15) 0%, transparent 60%),
+            radial-gradient(ellipse 50% 50% at 80% 80%, rgba(65,70,139,0.12) 0%, transparent 50%),
+            radial-gradient(ellipse 50% 50% at 20% 80%, rgba(45,50,119,0.15) 0%, transparent 50%)
+          `
+        }}
+      />
       <AnimatePresence>
         {isLoading && (
           <motion.div
@@ -166,7 +176,7 @@ export default function ExplorePage() {
             </div>
           </div>
 
-          <div className="relative w-full h-screen flex items-center justify-center overflow-hidden">
+          <div className="relative w-full min-h-screen flex items-center justify-center overflow-visible">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}

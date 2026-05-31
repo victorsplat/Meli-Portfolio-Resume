@@ -156,6 +156,49 @@ export function useMigrateImage() {
   });
 }
 
+export function useBatchUpdate() {
+  const queryClient = useQueryClient();
+  const getAuthHeaders = useAuthStore((s) => s.getAuthHeaders);
+
+  return useMutation({
+    mutationFn: async ({ ids, title, description, category, featured }: { ids: string[] } & Record<string, unknown>) => {
+      const res = await fetch('/api/gallery', {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ ids, title, description, category, featured }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Batch update failed');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['gallery-images'] });
+    },
+  });
+}
+
+export function useBatchDelete() {
+  const queryClient = useQueryClient();
+  const getAuthHeaders = useAuthStore((s) => s.getAuthHeaders);
+
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      const res = await fetch('/api/gallery', {
+        method: 'DELETE',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      });
+      if (!res.ok) throw new Error('Batch delete failed');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['gallery-images'] });
+    },
+  });
+}
+
 export function useSubmitContact() {
   return useMutation({
     mutationFn: async (form: ContactFormData) => {

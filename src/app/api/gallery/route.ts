@@ -168,12 +168,14 @@ export async function PUT(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-    if (!id) {
-      return NextResponse.json({ error: 'Image ID is required' }, { status: 400 });
+    const singleId = searchParams.get('id');
+    const body = await request.json();
+    const ids = body.ids || (singleId ? [singleId] : []);
+
+    if (ids.length === 0) {
+      return NextResponse.json({ error: 'Image ID(s) are required' }, { status: 400 });
     }
 
-    const body = await request.json();
     const { title, description, category, featured } = body;
 
     const client = await getClient();
@@ -218,13 +220,22 @@ export async function PUT(request: NextRequest) {
     }
 
     const { ObjectId } = await import('mongodb');
-    const result = await db.collection('images').updateOne(
-      { _id: new ObjectId(id) },
-      { $set: update }
-    );
+    const objectIds = ids.map((id: string) => new ObjectId(id));
 
-    if (result.matchedCount === 0) {
-      return NextResponse.json({ error: 'Image not found' }, { status: 404 });
+    if (singleId && ids.length === 1) {
+      const result = await db.collection('images').updateOne(
+        { _id: objectIds[0] },
+        { $set: update }
+      );
+      if (result.matchedCount === 0) {
+        return NextResponse.json({ error: 'Image not found' }, { status: 404 });
+      }
+    } else {
+      const result = await db.collection('images').updateMany(
+        { _id: { $in: objectIds } },
+        { $set: update }
+      );
+      return NextResponse.json({ success: true, modifiedCount: result.modifiedCount });
     }
 
     return NextResponse.json({ success: true });
@@ -249,10 +260,14 @@ export async function DELETE(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
+    const singleId = searchParams.get('id');
+    const body = request.headers.get('content-type')?.includes('application/json')
+      ? await request.json().catch(() => ({}))
+      : {};
+    const ids = body.ids || (singleId ? [singleId] : []);
 
-    if (!id) {
-      return NextResponse.json({ error: 'Image ID is required' }, { status: 400 });
+    if (ids.length === 0) {
+      return NextResponse.json({ error: 'Image ID(s) are required' }, { status: 400 });
     }
 
     const client = await getClient();
@@ -260,21 +275,24 @@ export async function DELETE(request: NextRequest) {
     const collection = db.collection('images');
 
     const { ObjectId } = await import('mongodb');
+    const objectIds = ids.map((id: string) => new ObjectId(id));
 
-    const existing = await collection.findOne({ _id: new ObjectId(id) }) as Record<string, unknown> | null;
-
-    if (existing?.url && typeof existing.url === 'string' && existing.url.startsWith('https://') && process.env.BLOB_READ_WRITE_TOKEN) {
-      try {
-        const { del } = await import('@vercel/blob');
-        await del(existing.url);
-      } catch (blobError) {
-        console.error('Failed to delete from Blob:', blobError);
+    if (singleId && ids.length === 1) {
+      const existing = await collection.findOne({ _id: objectIds[0] }) as Record<string, unknown> | null;
+      if (existing?.url && typeof existing.url === 'string' && existing.url.startsWith('https://') && process.env.BLOB_READ_WRITE_TOKEN) {
+        try {
+          const { del } = await import('@vercel/blob');
+          await del(existing.url);
+        } catch (blobError) {
+          console.error('Failed to delete from Blob:', blobError);
+        }
       }
+      await collection.deleteOne({ _id: objectIds[0] });
+    } else {
+      await collection.deleteMany({ _id: { $in: objectIds } });
     }
 
-    await collection.deleteOne({ _id: new ObjectId(id) });
-
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, deletedCount: ids.length });
   } catch (error) {
     console.error('Error deleting image:', error);
     return NextResponse.json({ error: 'Failed to delete image' }, { status: 500 });

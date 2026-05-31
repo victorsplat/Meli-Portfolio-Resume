@@ -7,7 +7,7 @@ import { useI18n } from '@/lib/i18n';
 import { usePageTitle } from '@/lib/usePageTitle';
 import { useAuthStore } from '@/lib/stores/authStore';
 import { useGalleryStore } from '@/lib/stores/galleryStore';
-import { useGalleryImages, useUploadImage, useDeleteImage, useUpdateImage, useGallerySettings } from '@/hooks/useGallery';
+import { useGalleryImages, useUploadImage, useDeleteImage, useUpdateImage, useGallerySettings, useBatchUpdate, useBatchDelete } from '@/hooks/useGallery';
 import { uploadFormSchema } from '@/lib/schemas/gallery';
 import { Button } from '@/components/ui/button';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
@@ -50,6 +50,8 @@ export default function GalleryAdmin() {
   const uploadMutation = useUploadImage();
   const deleteMutation = useDeleteImage();
   const updateMutation = useUpdateImage();
+  const batchUpdate = useBatchUpdate();
+  const batchDelete = useBatchDelete();
 
   const [passwordInput, setPasswordInput] = useState('');
   const [authError, setAuthError] = useState('');
@@ -57,6 +59,10 @@ export default function GalleryAdmin() {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [featured, setFeatured] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchCategory, setBatchCategory] = useState('');
+  const [batchFeatured, setBatchFeatured] = useState<boolean | undefined>(undefined);
+  const [showBatchEdit, setShowBatchEdit] = useState(false);
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -416,11 +422,110 @@ export default function GalleryAdmin() {
         </AnimatePresence>
 
         <div className="mb-6">
-          <h2 className="title text-xl">
-            {t('galleryAdmin.existing')}
-            <span className="text-muted text-lg ml-2">({images.length})</span>
-          </h2>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <h2 className="title text-xl">
+                {t('galleryAdmin.existing')}
+                <span className="text-muted text-lg ml-2">({images.length})</span>
+              </h2>
+              {images.length > 0 && (
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  onClick={() => {
+                    if (selectedIds.size === images.length) {
+                      setSelectedIds(new Set());
+                    } else {
+                      setSelectedIds(new Set(images.map((img: GalleryImage) => img._id)));
+                    }
+                  }}
+                  className="text-xs"
+                >
+                  {selectedIds.size === images.length ? 'Deselect All' : 'Select All'}
+                </Button>
+              )}
+            </div>
+            {selectedIds.size > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted">{selectedIds.size} selected</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    if (!confirm(`Delete ${selectedIds.size} images?`)) return;
+                    batchDelete.mutate(Array.from(selectedIds), {
+                      onSuccess: () => setSelectedIds(new Set()),
+                    });
+                  }}
+                  disabled={batchDelete.isPending}
+                  className="text-red-500 border-red-500/30 hover:bg-red-500/10"
+                >
+                  {batchDelete.isPending ? 'Deleting...' : `🗑 Delete (${selectedIds.size})`}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setBatchCategory('');
+                    setBatchFeatured(undefined);
+                    setShowBatchEdit(true);
+                  }}
+                >
+                  ✏️ Edit ({selectedIds.size})
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
+                  ✕ Clear
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
+
+        {showBatchEdit && selectedIds.size > 0 && (
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="card mb-6 p-4">
+            <h3 className="text-sm font-semibold mb-3">Batch Edit ({selectedIds.size} images)</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+              <div>
+                <label className="block text-xs font-medium text-muted mb-1">Category</label>
+                <select value={batchCategory} onChange={(e) => setBatchCategory(e.target.value)} className="input text-sm">
+                  <option value="">— No change —</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>{cat.emoji} {cat.name?.en || cat.id}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted mb-1">Featured</label>
+                <select value={batchFeatured === undefined ? '' : batchFeatured ? 'true' : 'false'} onChange={(e) => setBatchFeatured(e.target.value === '' ? undefined : e.target.value === 'true')} className="input text-sm">
+                  <option value="">— No change —</option>
+                  <option value="true">★ Featured</option>
+                  <option value="false">Not featured</option>
+                </select>
+              </div>
+              <div className="flex items-end gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    const updates: Record<string, unknown> = {};
+                    if (batchCategory) updates.category = batchCategory;
+                    if (batchFeatured !== undefined) updates.featured = batchFeatured;
+                    if (Object.keys(updates).length === 0) return;
+                    batchUpdate.mutate({ ids: Array.from(selectedIds), ...updates }, {
+                      onSuccess: () => {
+                        setShowBatchEdit(false);
+                        setSelectedIds(new Set());
+                      },
+                    });
+                  }}
+                  disabled={batchUpdate.isPending || (Object.keys({ ...(batchCategory ? { category: true } : {}), ...(batchFeatured !== undefined ? { featured: true } : {}) }).length === 0)}
+                >
+                  {batchUpdate.isPending ? 'Saving...' : 'Apply to All'}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setShowBatchEdit(false)}>Cancel</Button>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {isLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
@@ -444,19 +549,36 @@ export default function GalleryAdmin() {
                 const titleText = (img.title as Record<string, string>)?.[lang] || (img.title as Record<string, string>)?.en || '';
                 const descText = (img.description as Record<string, string>)?.[lang] || (img.description as Record<string, string>)?.en || '';
                 const altText = titleText || 'Gallery image';
-                return (
+                    const isSelected = selectedIds.has(img._id);
+                    return (
                   <motion.div
                     key={img._id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.9 }}
                     transition={{ delay: i * 0.03 }}
-                    className="card p-3 cursor-pointer group relative card-hover"
+                    className={`card p-3 cursor-pointer group relative card-hover ${isSelected ? 'ring-2 ring-[#FFE600] bg-[#FFE600]/5' : ''}`}
                     onClick={() => setSelectedImage(img)}
                     layout
                   >
+                    <div
+                      className="absolute top-2 left-2 z-10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedIds(prev => {
+                          const next = new Set(prev);
+                          if (next.has(img._id)) next.delete(img._id);
+                          else next.add(img._id);
+                          return next;
+                        });
+                      }}
+                    >
+                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isSelected ? 'bg-[#FFE600] border-[#FFE600]' : 'bg-white/80 dark:bg-white/10 border-white/60 dark:border-white/30'}`}>
+                        {isSelected && <span className="text-[10px] font-bold text-[#111827]">✓</span>}
+                      </div>
+                    </div>
                     {img.featured && (
-                      <span className="absolute top-4 right-4 bg-[#FFE600] text-[#111827] text-[10px] font-bold px-2 py-0.5 rounded-full z-10 shadow-md">★ Featured</span>
+                      <span className="absolute top-2 right-2 bg-[#FFE600] text-[#111827] text-[10px] font-bold px-2 py-0.5 rounded-full z-10 shadow-md">★ Featured</span>
                     )}
                     <div className="aspect-square rounded-xl overflow-hidden mb-3 ring-1 ring-panel-border/50">
                       <img src={img.url} alt={altText} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" />
