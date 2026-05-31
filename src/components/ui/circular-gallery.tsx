@@ -75,9 +75,9 @@ const GalleryCard = memo(function GalleryCard({
         opacity: opacity,
         filter: blur > 0.5 ? `blur(${blur}px)` : 'none',
         boxShadow: boxShadow,
-        transition: 'opacity 0.6s ease, transform 0.8s cubic-bezier(0.22,1,0.36,1), filter 0.8s ease, box-shadow 0.6s ease',
+        transition: 'opacity 0.6s ease, transform 0.8s cubic-bezier(0.22,1,0.36,1), box-shadow 0.6s ease',
         pointerEvents: isVisible && opacity > 0.1 ? 'auto' : 'none',
-        willChange: isCenter ? 'transform' : 'auto',
+        willChange: isVisible ? 'transform, opacity' : 'auto',
       }}
     >
       <div className="relative w-full h-full rounded-xl shadow-2xl overflow-hidden border border-border/50 bg-card/70 dark:bg-card/30 backdrop-blur-lg">
@@ -117,7 +117,7 @@ export default function CircularGallery({
   radius = 500,
   autoRotateSpeed = 0.01,
   visibleRange = 2,
-  maxBlur = 10,
+  maxBlur = 4,
   glowIntensity = 0.25,
   onImageClick,
 }: CircularGalleryProps) {
@@ -301,7 +301,7 @@ export default function CircularGallery({
       />
 
       <div
-        className="relative w-full h-full flex items-center justify-center"
+        className="relative w-full h-full"
         style={{
           transformStyle: 'preserve-3d',
           transform: `rotateY(${rotation}deg)`,

@@ -210,7 +210,7 @@ export default function ExplorePage() {
                 items={galleryItems}
                 radius={radius}
                 visibleRange={visibleRange}
-                maxBlur={10}
+                maxBlur={4}
                 onImageClick={handleLightboxOpen}
               />
             </motion.div>
