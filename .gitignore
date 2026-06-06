@@ -6,3 +6,4 @@ AGENTS.md
 .vscode
 .vite
 to_delete
+tsconfig.tsbuildinfo
